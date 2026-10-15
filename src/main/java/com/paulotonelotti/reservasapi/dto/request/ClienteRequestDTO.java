@@ -12,7 +12,7 @@ public record ClienteRequestDTO(
 
     @NotBlank (message = "O email é obrigatório e deve ser preenchido") 
     @Email
-    @Size 
+    @Size (max = 320)
     String email
 ) {
     
