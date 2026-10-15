@@ -83,7 +83,7 @@ Em caso de conflito de horário, a API responde com `409 Conflict`.
 
 ## Roadmap
 
-- [ ] Entidades e relacionamentos
+- [X] Entidades e relacionamentos
 - [ ] CRUD de clientes e espaços
 - [ ] Criação de reserva com validação de conflito
 - [ ] Cancelamento de reserva
