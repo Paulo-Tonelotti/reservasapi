@@ -15,7 +15,7 @@ public record ReservaRequestDTO(
     @NotNull (message = "O id do espaço é obrigatório")
     UUID espacoId,
 
-    @NotNull (message = "A data de inicio é obrigatória")
+    @NotNull (message = "A data de início é obrigatória")
     @Future (message = "Data de inicio deve ser futura")
     LocalDateTime inicio,
 

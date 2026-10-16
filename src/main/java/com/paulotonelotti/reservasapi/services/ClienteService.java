@@ -1,0 +1,98 @@
+package com.paulotonelotti.reservasapi.services;
+
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.paulotonelotti.reservasapi.dto.request.ClienteRequestDTO;
+import com.paulotonelotti.reservasapi.dto.response.ClienteResponseDTO;
+import com.paulotonelotti.reservasapi.entity.Cliente;
+import com.paulotonelotti.reservasapi.exceptions.ConflitoDuplicidadeException;
+import com.paulotonelotti.reservasapi.exceptions.RecursoNaoEncontradoException;
+import com.paulotonelotti.reservasapi.repositories.ClienteRepository;
+
+@Service
+public class ClienteService {
+
+    private final ClienteRepository clienteRepository;
+
+    public ClienteService(ClienteRepository clienteRepository) {
+        this.clienteRepository = clienteRepository;
+    }
+
+    @Transactional
+    public ClienteResponseDTO salvar(ClienteRequestDTO clienteDto) {
+        String email = normalizarEmail(clienteDto.email());
+        String nome = normalizarNome(clienteDto.nome());
+
+        if (clienteRepository.existsByEmail(email)) {
+            throw new ConflitoDuplicidadeException("Email já cadastrado");
+        }
+
+        Cliente cliente = new Cliente();
+        cliente.setNome(nome);
+        cliente.setEmail(email);
+
+        Cliente clienteSalvo = clienteRepository.save(cliente);
+
+        return new ClienteResponseDTO(clienteSalvo);
+    }
+
+    @Transactional(readOnly = true)
+    public Cliente buscarEntidadePorId(UUID id) {
+        return clienteRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException(String.format("Cliente não encontrado: %s", id)));
+
+    }
+
+    @Transactional(readOnly = true)
+    public ClienteResponseDTO buscarPorId(UUID id) {
+        Cliente cliente = buscarEntidadePorId(id);
+
+        return new ClienteResponseDTO(cliente);
+
+    }
+
+    @Transactional(readOnly = true)
+    public List<ClienteResponseDTO> listar() {
+        List<Cliente> clientes = clienteRepository.findAll();
+
+        return clientes
+                .stream()
+                .map(ClienteResponseDTO::new)
+                .toList();
+
+    }
+
+    @Transactional
+    public ClienteResponseDTO atualizar(UUID id, ClienteRequestDTO clienteDto) {
+        Cliente cliente = buscarEntidadePorId(id);
+
+        String email = normalizarEmail(clienteDto.email());
+        String nome = normalizarNome(clienteDto.nome());
+
+        if(!cliente.getEmail().equals(email)) {
+            boolean emailExistente = clienteRepository.existsByEmail(email);
+
+            if(emailExistente) {
+                throw new ConflitoDuplicidadeException("Email de atualização já cadastrado");
+            }
+        }
+
+        cliente.setNome(nome);
+        cliente.setEmail(email);
+
+        return new ClienteResponseDTO(cliente);
+    }
+
+    private String normalizarEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizarNome(String nome) {
+        return nome == null ? null : nome.trim();
+    }
+}
