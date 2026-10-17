@@ -3,11 +3,12 @@ package com.paulotonelotti.reservasapi.repositories;
 import java.util.Optional;
 import java.util.UUID;
 
-import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 
 import com.paulotonelotti.reservasapi.entity.Espaco;
-import org.springframework.data.jpa.repository.Lock;
+
+import jakarta.persistence.LockModeType;
 
 public interface EspacoRepository extends JpaRepository<Espaco, UUID> {
 

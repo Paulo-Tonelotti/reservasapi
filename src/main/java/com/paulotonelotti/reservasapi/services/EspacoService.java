@@ -1,6 +1,5 @@
 package com.paulotonelotti.reservasapi.services;
 
-import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -9,14 +8,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.paulotonelotti.reservasapi.exceptions.RegraNegocioException;
-import com.paulotonelotti.reservasapi.repositories.ReservaRepository;
 import com.paulotonelotti.reservasapi.dto.request.EspacoRequestDTO;
 import com.paulotonelotti.reservasapi.dto.response.EspacoResponseDTO;
 import com.paulotonelotti.reservasapi.entity.Espaco;
 import com.paulotonelotti.reservasapi.exceptions.ConflitoDuplicidadeException;
 import com.paulotonelotti.reservasapi.exceptions.RecursoNaoEncontradoException;
+import com.paulotonelotti.reservasapi.exceptions.RegraNegocioException;
 import com.paulotonelotti.reservasapi.repositories.EspacoRepository;
+import com.paulotonelotti.reservasapi.repositories.ReservaRepository;
 
 @Service
 @Transactional(readOnly = true)
@@ -95,8 +94,7 @@ public class EspacoService {
 
         if (reservaRepository.existsByEspacoId(id)) {
             throw new RegraNegocioException(
-                    "Não é possível excluir o espaço: existem reservas vinculadas a ele"
-            );
+                    "Não é possível excluir o espaço: existem reservas vinculadas a ele");
         }
 
         espacoRepository.delete(espaco);

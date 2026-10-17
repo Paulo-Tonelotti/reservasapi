@@ -60,14 +60,9 @@ public class ReservaService {
         return new ReservaResponseDTO(reserva);
     }
 
-    public Page<ReservaResponseDTO> listar(UUID espacoId,
-                                           UUID clienteId,
-                                           StatusReserva status,
-                                           Pageable pageable) {
-        Page<Reserva> reservas = reservaRepository.buscarComFiltros(espacoId,
-                                                    clienteId,
-                                                    status,
-                                                    pageable);
+    public Page<ReservaResponseDTO> listar(
+            UUID espacoId, UUID clienteId, StatusReserva status, Pageable pageable) {
+        Page<Reserva> reservas = reservaRepository.buscarComFiltros(espacoId, clienteId, status, pageable);
         return reservas.map(ReservaResponseDTO::new);
     }
 
@@ -112,7 +107,8 @@ public class ReservaService {
 
     private BigDecimal calcularValorTotal(ReservaRequestDTO reservaDto, Espaco espaco) {
         Duration duracaoReserva = Duration.between(reservaDto.inicio(), reservaDto.fim());
-        BigDecimal valorTotal = espaco.getValorPorHora().multiply(BigDecimal.valueOf(duracaoReserva.toMinutes()));
+        BigDecimal valorTotal = espaco.getValorPorHora()
+                .multiply(BigDecimal.valueOf(duracaoReserva.toMinutes()));
 
         return valorTotal.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
     }

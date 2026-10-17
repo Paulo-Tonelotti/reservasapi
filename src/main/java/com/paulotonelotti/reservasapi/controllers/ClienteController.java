@@ -23,7 +23,6 @@ import com.paulotonelotti.reservasapi.services.ClienteService;
 
 import jakarta.validation.Valid;
 
-
 @RestController
 @RequestMapping("/clientes")
 public class ClienteController {
@@ -46,22 +45,11 @@ public class ClienteController {
         return ResponseEntity.created(uri).body(response);
     }
 
-    /*
-     @GetMapping
-     public ResponseEntity<List<ClienteResponseDTO>> listarClientes() {
-         List<ClienteResponseDTO> listaClientes = clienteService.listar();
-         return ResponseEntity.ok(listaClientes);
-     }
-    */
-
-
     @GetMapping
     public ResponseEntity<Page<ClienteResponseDTO>> listarClientesPaginado(
-        @PageableDefault(sort = "nome") Pageable pageable
-    ) {
+            @PageableDefault(sort = "nome") Pageable pageable) {
         return ResponseEntity.ok(clienteService.listar(pageable));
     }
-    
 
     @GetMapping("/{id}")
     public ResponseEntity<ClienteResponseDTO> buscarClientePorId(@PathVariable UUID id) {
