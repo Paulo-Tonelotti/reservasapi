@@ -13,6 +13,8 @@ public interface ReservaRepository extends JpaRepository<Reserva, UUID> {
 
     boolean existsByClienteId(UUID clienteId);
 
+    boolean existsByEspacoId(UUID espacoId);
+
     @Query("""
         SELECT COUNT(r) > 0 FROM Reserva r
         WHERE r.espaco.id = :espacoId

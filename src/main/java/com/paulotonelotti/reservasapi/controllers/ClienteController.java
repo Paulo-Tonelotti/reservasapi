@@ -35,8 +35,8 @@ public class ClienteController {
     }
 
     @PostMapping
-    public ResponseEntity<ClienteResponseDTO> salvarCliente(@Valid @RequestBody ClienteRequestDTO clienteDto) {
-        ClienteResponseDTO response = clienteService.salvar(clienteDto);
+    public ResponseEntity<ClienteResponseDTO> salvarCliente(@Valid @RequestBody ClienteRequestDTO clienteReqDto) {
+        ClienteResponseDTO response = clienteService.salvar(clienteReqDto);
 
         URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -46,16 +46,18 @@ public class ClienteController {
         return ResponseEntity.created(uri).body(response);
     }
 
-    // @GetMapping
-    // public ResponseEntity<List<ClienteResponseDTO>> listarClientes() {
-    //     List<ClienteResponseDTO> listaClientes = clienteService.listar();
-    //     return ResponseEntity.ok(listaClientes);
-    // }
+    /*
+     @GetMapping
+     public ResponseEntity<List<ClienteResponseDTO>> listarClientes() {
+         List<ClienteResponseDTO> listaClientes = clienteService.listar();
+         return ResponseEntity.ok(listaClientes);
+     }
+    */
 
 
-    @GetMapping("/paginados")
+    @GetMapping
     public ResponseEntity<Page<ClienteResponseDTO>> listarClientesPaginado(
-        @PageableDefault(size = 10, sort = "nome") Pageable pageable
+        @PageableDefault(sort = "nome") Pageable pageable
     ) {
         return ResponseEntity.ok(clienteService.listar(pageable));
     }
@@ -69,8 +71,8 @@ public class ClienteController {
 
     @PutMapping("/{id}")
     public ResponseEntity<ClienteResponseDTO> atualizarCliente(
-            @PathVariable UUID id, @Valid @RequestBody ClienteRequestDTO clienteDto) {
-        ClienteResponseDTO response = clienteService.atualizar(id, clienteDto);
+            @PathVariable UUID id, @Valid @RequestBody ClienteRequestDTO clienteReqDto) {
+        ClienteResponseDTO response = clienteService.atualizar(id, clienteReqDto);
         return ResponseEntity.ok(response);
     }
 

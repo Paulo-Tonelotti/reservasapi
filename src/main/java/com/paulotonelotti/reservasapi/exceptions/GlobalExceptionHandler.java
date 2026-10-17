@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -100,6 +101,19 @@ public class GlobalExceptionHandler {
                 "Operação não permitida",
                 ex.getMessage(),
                 request);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErroResponse> handleHttpMessageNotReadableException(
+            HttpMessageNotReadableException ex, HttpServletRequest request
+    ) {
+
+        return montarErroResponse(
+                HttpStatus.BAD_REQUEST,
+                "Corpo de requisição invalido",
+                "Corpo da requisição inválido ou mal formatado",
+                request
+        );
     }
 
     private ResponseEntity<ErroResponse> montarErroResponse(

@@ -11,7 +11,7 @@ import jakarta.validation.constraints.Size;
 public record EspacoRequestDTO(
 
     @NotBlank(message = "O nome é obrigatório e deve ser preenchido")
-    @Size(max = 100)
+    @Size(message = "O nome deve ter no máximo 100 caracteres", max = 100)
     String nome,
 
     @NotNull(message = "A capacidade é obrigatória e deve ser preenchida")
@@ -20,7 +20,7 @@ public record EspacoRequestDTO(
 
     @NotNull(message = "O valor por hora é obrigatório e deve ser preenchido")
     @Positive(message = "O valor por hora deve ser positivo")
-    @Digits(integer = 8, fraction = 2)
+    @Digits(message = "O valor por hora deve ter no máximo 8 dígitos inteiros e 2 casas decimais", integer = 8, fraction = 2)
     BigDecimal valorPorHora
 ) {
 }
