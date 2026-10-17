@@ -1,8 +1,10 @@
+server:
+    port: 8084
 spring:
     application:
         name: reservasapi
     datasource:
-        url: jdbc:postgresql://localhost:5434/reservas
+        url: jdbc:postgresql://localhost:5435/reservas
         username: postgres
         password: postgres
         driver-class-name: org.postgresql.Driver

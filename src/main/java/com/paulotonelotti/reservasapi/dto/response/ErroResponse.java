@@ -1,4 +1,4 @@
-package com.paulotonelotti.reservasapi.exceptions.dto;
+package com.paulotonelotti.reservasapi.dto.response;
 
 import java.time.Instant;
 
