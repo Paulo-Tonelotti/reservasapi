@@ -12,6 +12,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import com.paulotonelotti.reservasapi.dto.response.ErroResponse;
 import com.paulotonelotti.reservasapi.dto.response.ErroValidacaoResponse;
@@ -57,55 +58,74 @@ public class GlobalExceptionHandler {
                 HttpStatus.NOT_FOUND,
                 "Recurso não encontrado",
                 ex.getMessage(),
-                request
-        );
+                request);
     }
 
-    @ExceptionHandler (MethodArgumentNotValidException.class)
+    @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErroValidacaoResponse> handleValidacaoDadosRequest(
-        MethodArgumentNotValidException ex, HttpServletRequest request) {
+            MethodArgumentNotValidException ex, HttpServletRequest request) {
 
         List<CampoErro> erros = ex
-                                .getBindingResult()
-                                .getFieldErrors()
-                                .stream()
-                                .map((FieldError field) -> new CampoErro(field.getField(), field.getDefaultMessage()))
-                                .toList();
-            
+                .getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map((FieldError field) -> new CampoErro(field.getField(), field.getDefaultMessage()))
+                .toList();
+
         return montarErroValidacaoResponse(
-                HttpStatus.NOT_FOUND, 
-                "Erro de validação", 
-                "Um ou mais campos estão inválidos.", 
-                erros, 
+                HttpStatus.BAD_REQUEST,
+                "Erro de validação",
+                "Um ou mais campos estão inválidos.",
+                erros,
                 request);
-           
-        }
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErroResponse> handleTipoDeArgumentoIncompativel(
+        MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        
+        return montarErroResponse(
+                HttpStatus.BAD_REQUEST,
+                "Argumento inválido",
+                "O argumento passado para consultado não corresponde com o tipo esperado",
+                request);
+    }
+
+    @ExceptionHandler(RegraNegocioException.class)
+    public ResponseEntity<ErroResponse> handleRegraNegocio(
+            RegraNegocioException ex, HttpServletRequest request) {
+
+        return montarErroResponse(
+                HttpStatus.CONFLICT,
+                "Operação não permitida",
+                ex.getMessage(),
+                request);
+    }
 
     private ResponseEntity<ErroResponse> montarErroResponse(
             HttpStatus statusHttp, String tituloErro, String mensagem, HttpServletRequest request) {
 
         ErroResponse erro = new ErroResponse(
-            Instant.now(),
-            statusHttp.value(),
-            tituloErro,
-            mensagem,
-            request.getRequestURI()
-        );
+                Instant.now(),
+                statusHttp.value(),
+                tituloErro,
+                mensagem,
+                request.getRequestURI());
 
         return ResponseEntity.status(statusHttp).body(erro);
     }
 
-        private ResponseEntity<ErroValidacaoResponse> montarErroValidacaoResponse(
-            HttpStatus statusHttp, String tituloErro, String mensagem, List<CampoErro> erros, HttpServletRequest request) {
+    private ResponseEntity<ErroValidacaoResponse> montarErroValidacaoResponse(
+            HttpStatus statusHttp, String tituloErro, String mensagem,
+            List<CampoErro> erros, HttpServletRequest request) {
 
         ErroValidacaoResponse erro = new ErroValidacaoResponse(
-            Instant.now(),
-            statusHttp.value(),
-            tituloErro,
-            mensagem,
-            request.getRequestURI(),
-            erros
-        );
+                Instant.now(),
+                statusHttp.value(),
+                tituloErro,
+                mensagem,
+                request.getRequestURI(),
+                erros);
 
         return ResponseEntity.status(statusHttp).body(erro);
     }

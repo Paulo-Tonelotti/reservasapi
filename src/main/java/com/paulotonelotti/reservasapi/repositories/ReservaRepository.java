@@ -9,15 +9,19 @@ import org.springframework.data.repository.query.Param;
 
 import com.paulotonelotti.reservasapi.entity.Reserva;
 
-public interface ReservaRepository extends JpaRepository<Reserva, UUID>{
-    @Query ("""
-    SELECT COUNT(r) > 0 FROM Reserva r
-    WHERE r.espaco.id = :espacoId
-      AND r.status <> com.paulotonelotti.reservasapi.entity.enums.StatusReserva.CANCELADA
-      AND r.inicio < :fim
-      AND r.fim > :inicio
-    """)
-    boolean existeConflito(@Param ("espacoId") UUID espacoId,
-                            @Param("inicio") LocalDateTime inicio, 
-                            @Param("fim") LocalDateTime fim);
+public interface ReservaRepository extends JpaRepository<Reserva, UUID> {
+
+    boolean existsByClienteId(UUID clienteId);
+
+    @Query("""
+        SELECT COUNT(r) > 0 FROM Reserva r
+        WHERE r.espaco.id = :espacoId
+          AND r.status <> com.paulotonelotti.reservasapi.entity.enums.StatusReserva.CANCELADA
+          AND r.inicio < :fim
+          AND r.fim > :inicio
+        """)
+    boolean existeConflito(
+            @Param("espacoId") UUID espacoId,
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim);
 }

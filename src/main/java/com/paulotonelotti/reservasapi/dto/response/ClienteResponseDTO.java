@@ -10,8 +10,9 @@ public record ClienteResponseDTO(
     String email
 ) {
     public ClienteResponseDTO(Cliente cliente) {
-        this(cliente.getId(), 
-            cliente.getNome(), 
+        this(
+            cliente.getId(),
+            cliente.getNome(),
             cliente.getEmail());
     }
 }

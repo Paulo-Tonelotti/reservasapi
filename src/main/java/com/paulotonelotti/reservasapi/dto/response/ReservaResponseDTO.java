@@ -6,7 +6,6 @@ import java.util.UUID;
 import com.paulotonelotti.reservasapi.entity.Reserva;
 import com.paulotonelotti.reservasapi.entity.enums.StatusReserva;
 
-
 public record ReservaResponseDTO(
     UUID id,
     UUID clienteId,
@@ -16,11 +15,12 @@ public record ReservaResponseDTO(
     StatusReserva status
 ) {
     public ReservaResponseDTO(Reserva reserva) {
-        this(reserva.getId(), 
-            reserva.getCliente().getId(), 
-            reserva.getEspaco().getId(), 
-            reserva.getInicio(), 
-            reserva.getFim(), 
+        this(
+            reserva.getId(),
+            reserva.getCliente().getId(),
+            reserva.getEspaco().getId(),
+            reserva.getInicio(),
+            reserva.getFim(),
             reserva.getStatus());
     }
 }

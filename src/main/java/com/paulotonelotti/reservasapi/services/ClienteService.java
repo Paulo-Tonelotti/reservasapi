@@ -12,15 +12,19 @@ import com.paulotonelotti.reservasapi.dto.response.ClienteResponseDTO;
 import com.paulotonelotti.reservasapi.entity.Cliente;
 import com.paulotonelotti.reservasapi.exceptions.ConflitoDuplicidadeException;
 import com.paulotonelotti.reservasapi.exceptions.RecursoNaoEncontradoException;
+import com.paulotonelotti.reservasapi.exceptions.RegraNegocioException;
 import com.paulotonelotti.reservasapi.repositories.ClienteRepository;
+import com.paulotonelotti.reservasapi.repositories.ReservaRepository;
 
 @Service
 public class ClienteService {
 
     private final ClienteRepository clienteRepository;
+    private final ReservaRepository reservaRepository;
 
-    public ClienteService(ClienteRepository clienteRepository) {
+    public ClienteService(ClienteRepository clienteRepository, ReservaRepository reservaRepository) {
         this.clienteRepository = clienteRepository;
+        this.reservaRepository = reservaRepository;
     }
 
     @Transactional
@@ -44,8 +48,8 @@ public class ClienteService {
     @Transactional(readOnly = true)
     public Cliente buscarEntidadePorId(UUID id) {
         return clienteRepository.findById(id)
-                .orElseThrow(() -> new RecursoNaoEncontradoException(String.format("Cliente não encontrado: %s", id)));
-
+                .orElseThrow(() -> new RecursoNaoEncontradoException(
+                        String.format("Cliente não encontrado: %s", id)));
     }
 
     @Transactional(readOnly = true)
@@ -53,7 +57,6 @@ public class ClienteService {
         Cliente cliente = buscarEntidadePorId(id);
 
         return new ClienteResponseDTO(cliente);
-
     }
 
     @Transactional(readOnly = true)
@@ -64,7 +67,6 @@ public class ClienteService {
                 .stream()
                 .map(ClienteResponseDTO::new)
                 .toList();
-
     }
 
     @Transactional
@@ -74,10 +76,10 @@ public class ClienteService {
         String email = normalizarEmail(clienteDto.email());
         String nome = normalizarNome(clienteDto.nome());
 
-        if(!cliente.getEmail().equals(email)) {
+        if (!cliente.getEmail().equals(email)) {
             boolean emailExistente = clienteRepository.existsByEmail(email);
 
-            if(emailExistente) {
+            if (emailExistente) {
                 throw new ConflitoDuplicidadeException("Email de atualização já cadastrado");
             }
         }
@@ -86,6 +88,18 @@ public class ClienteService {
         cliente.setEmail(email);
 
         return new ClienteResponseDTO(cliente);
+    }
+
+    @Transactional
+    public void excluir(UUID id) {
+        Cliente cliente = buscarEntidadePorId(id);
+
+        if (reservaRepository.existsByClienteId(id)) {
+            throw new RegraNegocioException(
+                    "Não é possível excluir o cliente: existem reservas vinculadas a ele");
+        }
+
+        clienteRepository.delete(cliente);
     }
 
     private String normalizarEmail(String email) {

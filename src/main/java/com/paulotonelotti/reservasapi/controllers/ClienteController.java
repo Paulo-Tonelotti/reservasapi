@@ -1,5 +1,17 @@
 package com.paulotonelotti.reservasapi.controllers;
 
+import java.net.URI;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -9,24 +21,10 @@ import com.paulotonelotti.reservasapi.services.ClienteService;
 
 import jakarta.validation.Valid;
 
-import java.net.URI;
-import java.util.List;
-import java.util.UUID;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-
-
-
 @RestController
 @RequestMapping("/clientes")
 public class ClienteController {
-    
+
     private final ClienteService clienteService;
 
     public ClienteController(ClienteService clienteService) {
@@ -38,25 +36,35 @@ public class ClienteController {
         ClienteResponseDTO response = clienteService.salvar(clienteDto);
 
         URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
-                    .path("/{id}")
-                    .buildAndExpand(response.id())
-                    .toUri();
+                .path("/{id}")
+                .buildAndExpand(response.id())
+                .toUri();
 
         return ResponseEntity.created(uri).body(response);
     }
-    
 
     @GetMapping
     public ResponseEntity<List<ClienteResponseDTO>> listarClientes() {
         List<ClienteResponseDTO> listaClientes = clienteService.listar();
-        return ResponseEntity.ok().body(listaClientes);
+        return ResponseEntity.ok(listaClientes);
     }
-
 
     @GetMapping("/{id}")
-    public ResponseEntity<ClienteResponseDTO> listarClientePorId(@Valid @PathVariable UUID id) {
+    public ResponseEntity<ClienteResponseDTO> buscarClientePorId(@PathVariable UUID id) {
         ClienteResponseDTO response = clienteService.buscarPorId(id);
-        return ResponseEntity.ok().body(response);
+        return ResponseEntity.ok(response);
     }
-    
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ClienteResponseDTO> atualizarCliente(
+            @PathVariable UUID id, @Valid @RequestBody ClienteRequestDTO clienteDto) {
+        ClienteResponseDTO response = clienteService.atualizar(id, clienteDto);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> excluirCliente(@PathVariable UUID id) {
+        clienteService.excluir(id);
+        return ResponseEntity.noContent().build();
+    }
 }

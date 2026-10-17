@@ -3,7 +3,6 @@ package com.paulotonelotti.reservasapi.dto.response;
 import java.time.Instant;
 import java.util.List;
 
-
 public record ErroValidacaoResponse(
     Instant timestamp,
     int status,

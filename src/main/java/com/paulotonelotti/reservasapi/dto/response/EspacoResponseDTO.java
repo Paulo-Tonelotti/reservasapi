@@ -12,9 +12,10 @@ public record EspacoResponseDTO(
     BigDecimal valorPorHora
 ) {
     public EspacoResponseDTO(Espaco espaco) {
-        this(espaco.getId(), 
-            espaco.getNome(), 
-            espaco.getCapacidade(), 
+        this(
+            espaco.getId(),
+            espaco.getNome(),
+            espaco.getCapacidade(),
             espaco.getValorPorHora());
     }
 }

@@ -13,20 +13,20 @@ import com.paulotonelotti.reservasapi.exceptions.ConflitoDuplicidadeException;
 import com.paulotonelotti.reservasapi.exceptions.RecursoNaoEncontradoException;
 import com.paulotonelotti.reservasapi.repositories.EspacoRepository;
 
-@Service 
+@Service
 public class EspacoService {
-    
+
     private final EspacoRepository espacoRepository;
 
     public EspacoService(EspacoRepository espacoRepository) {
         this.espacoRepository = espacoRepository;
     }
 
-    @Transactional 
+    @Transactional
     public EspacoResponseDTO salvar(EspacoRequestDTO espacoDto) {
         String nome = espacoDto.nome().trim();
 
-        if(espacoRepository.existsByNomeIgnoreCaseJpql(nome)) {
+        if (espacoRepository.existsByNomeIgnoreCaseJpql(nome)) {
             throw new ConflitoDuplicidadeException("Já existe espaço com esse nome");
         }
 
@@ -45,15 +45,16 @@ public class EspacoService {
         List<Espaco> listaEspacos = espacoRepository.findAll();
 
         return listaEspacos
-                    .stream()
-                    .map(EspacoResponseDTO::new)
-                    .toList();
+                .stream()
+                .map(EspacoResponseDTO::new)
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public Espaco buscarEntidadePorId(UUID id) {
         return espacoRepository.findById(id)
-                    .orElseThrow(() -> new RecursoNaoEncontradoException(String.format("Espaço não encontrado: %s", id)));
+                .orElseThrow(() -> new RecursoNaoEncontradoException(
+                        String.format("Espaço não encontrado: %s", id)));
     }
 
     @Transactional(readOnly = true)
@@ -62,5 +63,4 @@ public class EspacoService {
 
         return new EspacoResponseDTO(espaco);
     }
-
 }

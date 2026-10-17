@@ -13,14 +13,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Setter 
-@Getter 
-@Entity 
-@Table (name = "tb_espaco")
-@NoArgsConstructor 
+@Setter
+@Getter
+@Entity
+@Table(name = "tb_espaco")
+@NoArgsConstructor
 public class Espaco {
-    
-    @Id 
+
+    @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 

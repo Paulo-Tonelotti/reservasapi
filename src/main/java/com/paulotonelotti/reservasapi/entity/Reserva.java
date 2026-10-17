@@ -20,23 +20,23 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Setter 
-@Getter 
-@Entity 
+@Setter
+@Getter
+@Entity
 @Table(name = "tb_reserva")
-@NoArgsConstructor 
+@NoArgsConstructor
 public class Reserva {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne (fetch = FetchType.LAZY, optional = false)
-    @JoinColumn (name = "id_cliente", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "id_cliente", nullable = false)
     private Cliente cliente;
 
-    @ManyToOne (fetch = FetchType.LAZY, optional = false)
-    @JoinColumn (name = "id_espaco", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "id_espaco", nullable = false)
     private Espaco espaco;
 
     @Column(name = "data_inicio", nullable = false)

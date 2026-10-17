@@ -12,13 +12,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Setter 
+@Setter
 @Getter
 @Entity
 @Table(name = "tb_cliente")
-@NoArgsConstructor 
+@NoArgsConstructor
 public class Cliente {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -28,5 +28,4 @@ public class Cliente {
 
     @Column(name = "email", nullable = false, unique = true, length = 320)
     private String email;
-
 }
