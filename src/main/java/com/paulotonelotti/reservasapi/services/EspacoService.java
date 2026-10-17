@@ -1,10 +1,12 @@
 package com.paulotonelotti.reservasapi.services;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.paulotonelotti.reservasapi.exceptions.RegraNegocioException;
@@ -61,6 +63,13 @@ public class EspacoService {
     public EspacoResponseDTO buscarPorId(UUID id) {
         Espaco espaco = buscarEntidadePorId(id);
         return new EspacoResponseDTO(espaco);
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Espaco buscarEntidadePorIdComLock(UUID id) {
+        return espacoRepository.findComLockById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException(
+                        String.format("Espaço não encontrado: %s", id)));
     }
 
     @Transactional

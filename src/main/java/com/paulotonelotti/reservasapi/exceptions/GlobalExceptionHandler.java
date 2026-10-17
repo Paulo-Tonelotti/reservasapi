@@ -83,12 +83,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErroResponse> handleTipoDeArgumentoIncompativel(
-        MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
-        
+            MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+
         return montarErroResponse(
                 HttpStatus.BAD_REQUEST,
                 "Argumento inválido",
-                "O argumento passado para consultado não corresponde com o tipo esperado",
+                String.format("O valor informado para '%s' não corresponde ao tipo esperado", ex.getName()),
                 request);
     }
 
@@ -105,15 +105,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErroResponse> handleHttpMessageNotReadableException(
-            HttpMessageNotReadableException ex, HttpServletRequest request
-    ) {
+            HttpMessageNotReadableException ex, HttpServletRequest request) {
+
+        log.warn("Corpo de requisição ilegível em {}: {}",
+                request.getRequestURI(), ex.getMostSpecificCause().getMessage());
 
         return montarErroResponse(
                 HttpStatus.BAD_REQUEST,
-                "Corpo de requisição invalido",
+                "Corpo de requisição inválido",
                 "Corpo da requisição inválido ou mal formatado",
-                request
-        );
+                request);
     }
 
     private ResponseEntity<ErroResponse> montarErroResponse(
