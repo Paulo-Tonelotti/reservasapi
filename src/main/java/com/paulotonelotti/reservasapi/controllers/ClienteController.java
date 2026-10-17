@@ -1,9 +1,11 @@
 package com.paulotonelotti.reservasapi.controllers;
 
 import java.net.URI;
-import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +22,7 @@ import com.paulotonelotti.reservasapi.dto.response.ClienteResponseDTO;
 import com.paulotonelotti.reservasapi.services.ClienteService;
 
 import jakarta.validation.Valid;
+
 
 @RestController
 @RequestMapping("/clientes")
@@ -43,11 +46,20 @@ public class ClienteController {
         return ResponseEntity.created(uri).body(response);
     }
 
-    @GetMapping
-    public ResponseEntity<List<ClienteResponseDTO>> listarClientes() {
-        List<ClienteResponseDTO> listaClientes = clienteService.listar();
-        return ResponseEntity.ok(listaClientes);
+    // @GetMapping
+    // public ResponseEntity<List<ClienteResponseDTO>> listarClientes() {
+    //     List<ClienteResponseDTO> listaClientes = clienteService.listar();
+    //     return ResponseEntity.ok(listaClientes);
+    // }
+
+
+    @GetMapping("/paginados")
+    public ResponseEntity<Page<ClienteResponseDTO>> listarClientesPaginado(
+        @PageableDefault(size = 10, sort = "nome") Pageable pageable
+    ) {
+        return ResponseEntity.ok(clienteService.listar(pageable));
     }
+    
 
     @GetMapping("/{id}")
     public ResponseEntity<ClienteResponseDTO> buscarClientePorId(@PathVariable UUID id) {

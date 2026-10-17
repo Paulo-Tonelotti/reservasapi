@@ -1,6 +1,11 @@
 server:
     port: 8084
 spring:
+    data:
+        web:
+            pageable:
+                serialization-mode: via-dto
+                max-page-size: 50
     application:
         name: reservasapi
     datasource:

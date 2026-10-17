@@ -1,9 +1,10 @@
 package com.paulotonelotti.reservasapi.services;
 
-import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,7 @@ import com.paulotonelotti.reservasapi.repositories.ClienteRepository;
 import com.paulotonelotti.reservasapi.repositories.ReservaRepository;
 
 @Service
+@Transactional(readOnly = true)
 public class ClienteService {
 
     private final ClienteRepository clienteRepository;
@@ -45,28 +47,22 @@ public class ClienteService {
         return new ClienteResponseDTO(clienteSalvo);
     }
 
-    @Transactional(readOnly = true)
     public Cliente buscarEntidadePorId(UUID id) {
         return clienteRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         String.format("Cliente não encontrado: %s", id)));
     }
 
-    @Transactional(readOnly = true)
     public ClienteResponseDTO buscarPorId(UUID id) {
         Cliente cliente = buscarEntidadePorId(id);
 
         return new ClienteResponseDTO(cliente);
     }
 
-    @Transactional(readOnly = true)
-    public List<ClienteResponseDTO> listar() {
-        List<Cliente> clientes = clienteRepository.findAll();
+    public Page<ClienteResponseDTO> listar(Pageable pageable) {
+        Page<Cliente> clientes = clienteRepository.findAll(pageable);
 
-        return clientes
-                .stream()
-                .map(ClienteResponseDTO::new)
-                .toList();
+        return clientes.map(ClienteResponseDTO::new);
     }
 
     @Transactional
