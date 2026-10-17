@@ -1,5 +1,6 @@
 package com.paulotonelotti.reservasapi.entity;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -48,4 +49,7 @@ public class Reserva {
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
     private StatusReserva status;
+
+    @Column(name = "valor_total", nullable = false, precision = 10, scale = 2)
+    private BigDecimal valorTotal;
 }

@@ -84,14 +84,14 @@ Em caso de conflito de horário, a API responde com `409 Conflict`.
 ## Roadmap
 
 - [X] Entidades e relacionamentos
-- [ ] CRUD de clientes e espaços
-- [ ] Criação de reserva com validação de conflito
-- [ ] Cancelamento de reserva
-- [ ] Tratamento global de erros (`@RestControllerAdvice`)
-- [ ] Paginação e filtros na listagem
+- [X] CRUD de clientes e espaços
+- [X] Criação de reserva com validação de conflito
+- [X] Cancelamento de reserva
+- [X] Tratamento global de erros (`@RestControllerAdvice`)
+- [X] Paginação e filtros na listagem
 - [ ] Testes demonstrando o ciclo de vida das entidades
 - [ ] Controle de concorrência com `@Version` (optimistic locking)
 
 ## Autor
 
-Feito por **<seu-nome>** como projeto de estudo.
+Feito por **Paulo Tonelotti** como projeto de estudo.

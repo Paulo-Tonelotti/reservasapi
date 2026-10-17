@@ -1,5 +1,8 @@
 package com.paulotonelotti.reservasapi.services;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Duration;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -42,11 +45,14 @@ public class ReservaService {
             throw new RegraNegocioException("O horário informado já está ocupado");
         }
 
+        BigDecimal valorTotal = calcularValorTotal(reservaRequestDTO, espaco);
+
         Reserva reserva = new Reserva();
         reserva.setCliente(cliente);
         reserva.setEspaco(espaco);
         reserva.setInicio(reservaRequestDTO.inicio());
         reserva.setFim(reservaRequestDTO.fim());
+        reserva.setValorTotal(valorTotal);
         reserva.setStatus(StatusReserva.PENDENTE);
 
         reservaRepository.save(reserva);
@@ -102,5 +108,12 @@ public class ReservaService {
         reserva.setStatus(StatusReserva.CANCELADA);
 
         return new ReservaResponseDTO(reserva);
+    }
+
+    private BigDecimal calcularValorTotal(ReservaRequestDTO reservaDto, Espaco espaco) {
+        Duration duracaoReserva = Duration.between(reservaDto.inicio(), reservaDto.fim());
+        BigDecimal valorTotal = espaco.getValorPorHora().multiply(BigDecimal.valueOf(duracaoReserva.toMinutes()));
+
+        return valorTotal.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
     }
 }

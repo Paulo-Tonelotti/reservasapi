@@ -1,5 +1,6 @@
 package com.paulotonelotti.reservasapi.dto.response;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -12,6 +13,7 @@ public record ReservaResponseDTO(
     UUID espacoId,
     LocalDateTime inicio,
     LocalDateTime fim,
+    BigDecimal valorTotal,
     StatusReserva status
 ) {
     public ReservaResponseDTO(Reserva reserva) {
@@ -21,6 +23,7 @@ public record ReservaResponseDTO(
             reserva.getEspaco().getId(),
             reserva.getInicio(),
             reserva.getFim(),
+            reserva.getValorTotal(),
             reserva.getStatus());
     }
 }
