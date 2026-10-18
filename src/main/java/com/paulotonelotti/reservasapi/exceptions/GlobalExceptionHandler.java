@@ -9,6 +9,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -114,6 +115,20 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "Corpo de requisição inválido",
                 "Corpo da requisição inválido ou mal formatado",
+                request);
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ErroResponse> handleObjectOptimisticLockingFailure(
+            ObjectOptimisticLockingFailureException ex, HttpServletRequest request) {
+
+        log.warn("Conflito de atualização {}: {}",
+                request.getRequestURI(), ex.getMostSpecificCause().getMessage());
+
+        return montarErroResponse(
+                HttpStatus.CONFLICT,
+                "Conflito de atualização",
+                "A reserva foi alterada por outra operação. Consulte novamente e tente de novo",
                 request);
     }
 
