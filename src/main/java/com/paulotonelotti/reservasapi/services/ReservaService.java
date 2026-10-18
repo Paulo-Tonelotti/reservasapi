@@ -73,7 +73,9 @@ public class ReservaService {
     }
 
     public ReservaResponseDTO buscarPorId(UUID id) {
-        Reserva reserva = buscarEntidadePorId(id);
+        Reserva reserva = reservaRepository.findComDetalhesById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException(
+                        String.format("Reserva não encontrada: %s", id)));
         return new ReservaResponseDTO(reserva);
     }
 

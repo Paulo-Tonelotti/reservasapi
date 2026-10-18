@@ -6,6 +6,8 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -129,6 +131,45 @@ public class GlobalExceptionHandler {
                 HttpStatus.CONFLICT,
                 "Conflito de atualização",
                 "A reserva foi alterada por outra operação. Consulte novamente e tente de novo",
+                request);
+    }
+
+    // Ordenação por um campo que não existe (ex.: ?sort=telefone)
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ErroResponse> handlePropriedadeInexistente(
+            PropertyReferenceException ex, HttpServletRequest request) {
+
+        log.warn("Propriedade inexistente em {}: {}", request.getRequestURI(), ex.getMessage());
+
+        return montarErroResponse(
+                HttpStatus.BAD_REQUEST,
+                "Parâmetro de ordenação inválido",
+                String.format("Não é possível ordenar por '%s'", ex.getPropertyName()),
+                request);
+    }
+
+    // Ordenação com expressão inválida (ex.: ?sort=["nome"]). Essa exceção também aparece em erros
+    // de uso do JPA que são bugs do código; por isso só vira 400 quando a requisição tem "sort"
+    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
+    public ResponseEntity<ErroResponse> handleUsoInvalidoDeAcessoADados(
+            InvalidDataAccessApiUsageException ex, HttpServletRequest request) {
+
+        if (request.getParameter("sort") != null) {
+            log.warn("Ordenação inválida em {}: {}", request.getRequestURI(), ex.getMessage());
+
+            return montarErroResponse(
+                    HttpStatus.BAD_REQUEST,
+                    "Parâmetro de ordenação inválido",
+                    "Use o formato sort=campo,asc ou sort=campo,desc com um campo existente",
+                    request);
+        }
+
+        log.error("Erro de acesso a dados em {}", request.getRequestURI(), ex);
+
+        return montarErroResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Erro interno",
+                "Ocorreu um erro inesperado",
                 request);
     }
 

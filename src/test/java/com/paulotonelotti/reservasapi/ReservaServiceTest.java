@@ -9,7 +9,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -69,12 +71,15 @@ class ReservaServiceTest {
         espaco = new Espaco();
         espaco.setId(espacoId);
         espaco.setNome("Auditório");
+        espaco.setValorPorHora(new BigDecimal("600.00"));
 
         inicio = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0);
         fim = inicio.plusHours(2);
 
         request = new ReservaRequestDTO(clienteId, espacoId, inicio, fim);
     }
+
+    // ---------- criarReserva ----------
 
     @Test
     void criarReserva_semConflito_salvaReservaPendente() {
@@ -98,6 +103,32 @@ class ReservaServiceTest {
         assertEquals(clienteId, response.clienteId());
         assertEquals(espacoId, response.espacoId());
         assertEquals(StatusReserva.PENDENTE, response.status());
+    }
+
+    @Test
+    void criarReserva_duasHoras_calculaValorTotal() {
+        when(clienteService.buscarEntidadePorId(clienteId)).thenReturn(cliente);
+        when(espacoService.buscarEntidadePorIdComLock(espacoId)).thenReturn(espaco);
+        when(reservaRepository.existeConflito(espacoId, inicio, fim)).thenReturn(false);
+
+        ReservaResponseDTO response = reservaService.criarReserva(request);
+
+        // compareTo ignora a escala (1200.0 e 1200.00 são iguais); equals não
+        assertEquals(0, new BigDecimal("1200.00").compareTo(response.valorTotal()));
+    }
+
+    @Test
+    void criarReserva_umaHoraETrintaMinutos_cobraProporcional() {
+        LocalDateTime fimFracionado = inicio.plusMinutes(90);
+        ReservaRequestDTO requestFracionado = new ReservaRequestDTO(clienteId, espacoId, inicio, fimFracionado);
+
+        when(clienteService.buscarEntidadePorId(clienteId)).thenReturn(cliente);
+        when(espacoService.buscarEntidadePorIdComLock(espacoId)).thenReturn(espaco);
+        when(reservaRepository.existeConflito(espacoId, inicio, fimFracionado)).thenReturn(false);
+
+        ReservaResponseDTO response = reservaService.criarReserva(requestFracionado);
+
+        assertEquals(0, new BigDecimal("900.00").compareTo(response.valorTotal()));
     }
 
     @Test
@@ -134,5 +165,103 @@ class ReservaServiceTest {
                 () -> reservaService.criarReserva(request));
 
         verifyNoInteractions(reservaRepository);
+    }
+
+    // ---------- confirmarReserva ----------
+
+    @Test
+    void confirmarReserva_pendente_ficaConfirmada() {
+        Reserva reserva = reservaComStatus(StatusReserva.PENDENTE);
+        when(reservaRepository.findById(reserva.getId())).thenReturn(Optional.of(reserva));
+
+        ReservaResponseDTO response = reservaService.confirmarReserva(reserva.getId());
+
+        assertEquals(StatusReserva.CONFIRMADA, reserva.getStatus());
+        assertEquals(StatusReserva.CONFIRMADA, response.status());
+    }
+
+    @Test
+    void confirmarReserva_jaConfirmada_lancaExcecaoEMantemStatus() {
+        Reserva reserva = reservaComStatus(StatusReserva.CONFIRMADA);
+        when(reservaRepository.findById(reserva.getId())).thenReturn(Optional.of(reserva));
+
+        assertThrows(RegraNegocioException.class,
+                () -> reservaService.confirmarReserva(reserva.getId()));
+
+        assertEquals(StatusReserva.CONFIRMADA, reserva.getStatus());
+    }
+
+    @Test
+    void confirmarReserva_cancelada_lancaExcecaoEMantemStatus() {
+        Reserva reserva = reservaComStatus(StatusReserva.CANCELADA);
+        when(reservaRepository.findById(reserva.getId())).thenReturn(Optional.of(reserva));
+
+        assertThrows(RegraNegocioException.class,
+                () -> reservaService.confirmarReserva(reserva.getId()));
+
+        assertEquals(StatusReserva.CANCELADA, reserva.getStatus());
+    }
+
+    @Test
+    void confirmarReserva_inexistente_lancaRecursoNaoEncontrado() {
+        UUID idInexistente = UUID.randomUUID();
+        when(reservaRepository.findById(idInexistente)).thenReturn(Optional.empty());
+
+        assertThrows(RecursoNaoEncontradoException.class,
+                () -> reservaService.confirmarReserva(idInexistente));
+    }
+
+    // ---------- cancelarReserva ----------
+
+    @Test
+    void cancelarReserva_pendente_ficaCancelada() {
+        Reserva reserva = reservaComStatus(StatusReserva.PENDENTE);
+        when(reservaRepository.findById(reserva.getId())).thenReturn(Optional.of(reserva));
+
+        ReservaResponseDTO response = reservaService.cancelarReserva(reserva.getId());
+
+        assertEquals(StatusReserva.CANCELADA, reserva.getStatus());
+        assertEquals(StatusReserva.CANCELADA, response.status());
+    }
+
+    @Test
+    void cancelarReserva_confirmada_ficaCancelada() {
+        Reserva reserva = reservaComStatus(StatusReserva.CONFIRMADA);
+        when(reservaRepository.findById(reserva.getId())).thenReturn(Optional.of(reserva));
+
+        reservaService.cancelarReserva(reserva.getId());
+
+        assertEquals(StatusReserva.CANCELADA, reserva.getStatus());
+    }
+
+    @Test
+    void cancelarReserva_jaCancelada_lancaExcecao() {
+        Reserva reserva = reservaComStatus(StatusReserva.CANCELADA);
+        when(reservaRepository.findById(reserva.getId())).thenReturn(Optional.of(reserva));
+
+        assertThrows(RegraNegocioException.class,
+                () -> reservaService.cancelarReserva(reserva.getId()));
+    }
+
+    @Test
+    void cancelarReserva_inexistente_lancaRecursoNaoEncontrado() {
+        UUID idInexistente = UUID.randomUUID();
+        when(reservaRepository.findById(idInexistente)).thenReturn(Optional.empty());
+
+        assertThrows(RecursoNaoEncontradoException.class,
+                () -> reservaService.cancelarReserva(idInexistente));
+    }
+
+    // Monta uma reserva já existente (como se tivesse vindo do banco) no status informado
+    private Reserva reservaComStatus(StatusReserva status) {
+        Reserva reserva = new Reserva();
+        reserva.setId(UUID.randomUUID());
+        reserva.setCliente(cliente);
+        reserva.setEspaco(espaco);
+        reserva.setInicio(inicio);
+        reserva.setFim(fim);
+        reserva.setValorTotal(new BigDecimal("1200.00"));
+        reserva.setStatus(status);
+        return reserva;
     }
 }

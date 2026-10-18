@@ -22,3 +22,10 @@ spring:
         open-in-view: false
         properties:
             hibernate.format_sql: true
+springdoc:
+    # Não replica todos os @ExceptionHandler em todos os endpoints;
+    # cada endpoint declara só os erros que ele realmente pode devolver
+    override-with-generic-response: false
+    swagger-ui:
+        tags-sorter: alpha
+        display-request-duration: true
