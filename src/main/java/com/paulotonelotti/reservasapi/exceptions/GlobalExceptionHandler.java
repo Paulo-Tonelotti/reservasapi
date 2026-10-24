@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -117,6 +118,17 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "Corpo de requisição inválido",
                 "Corpo da requisição inválido ou mal formatado",
+                request);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErroResponse> handleBadCredentials(
+            BadCredentialsException ex, HttpServletRequest request) {
+
+        return montarErroResponse(
+                HttpStatus.UNAUTHORIZED,
+                "Não autorizado",
+                "Email ou senha inválidos",
                 request);
     }
 

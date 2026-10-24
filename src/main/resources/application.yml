@@ -1,5 +1,9 @@
 server:
     port: 8084
+app:
+    jwt:
+        secret: ${JWT_SECRET}
+        expiracao-minutos: 60
 spring:
     config:
         import: optional:file:.env[.properties]

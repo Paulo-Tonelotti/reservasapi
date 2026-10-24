@@ -3,6 +3,7 @@ package com.paulotonelotti.reservasapi.services;
 import java.util.Locale;
 import java.util.UUID;
 
+import com.paulotonelotti.reservasapi.helpers.HelperEmail;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -31,7 +32,7 @@ public class ClienteService {
 
     @Transactional
     public ClienteResponseDTO salvar(ClienteRequestDTO clienteDto) {
-        String email = normalizarEmail(clienteDto.email());
+        String email = HelperEmail.normalizarEmail(clienteDto.email());
         String nome = normalizarNome(clienteDto.nome());
 
         if (clienteRepository.existsByEmail(email)) {
@@ -69,7 +70,7 @@ public class ClienteService {
     public ClienteResponseDTO atualizar(UUID id, ClienteRequestDTO clienteDto) {
         Cliente cliente = buscarEntidadePorId(id);
 
-        String email = normalizarEmail(clienteDto.email());
+        String email = HelperEmail.normalizarEmail(clienteDto.email());
         String nome = normalizarNome(clienteDto.nome());
 
         if (!cliente.getEmail().equals(email)) {
@@ -96,10 +97,6 @@ public class ClienteService {
         }
 
         clienteRepository.delete(cliente);
-    }
-
-    private String normalizarEmail(String email) {
-        return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
     }
 
     private String normalizarNome(String nome) {
