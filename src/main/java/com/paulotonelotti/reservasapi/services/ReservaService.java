@@ -5,7 +5,7 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.util.UUID;
 
-import com.paulotonelotti.reservasapi.dto.request.UsuarioLogadoRequestDTO;
+import com.paulotonelotti.reservasapi.security.UsuarioLogado;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -73,7 +73,7 @@ public class ReservaService {
                         String.format("Reserva não encontrada: %s", id)));
     }
 
-    public ReservaResponseDTO buscarPorId(UUID id, UsuarioLogadoRequestDTO usuarioLogado) {
+    public ReservaResponseDTO buscarPorId(UUID id, UsuarioLogado usuarioLogado) {
         Reserva reserva = reservaRepository.findComDetalhesById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         String.format("Reserva não encontrada: %s", id)));
@@ -96,7 +96,7 @@ public class ReservaService {
     }
 
     @Transactional
-    public ReservaResponseDTO cancelarReserva(UUID id, UsuarioLogadoRequestDTO usuarioLogado) {
+    public ReservaResponseDTO cancelarReserva(UUID id, UsuarioLogado usuarioLogado) {
         Reserva reserva = buscarEntidadePorId(id);
 
         verificarAcesso(reserva, usuarioLogado);
@@ -120,11 +120,11 @@ public class ReservaService {
         return valorTotal.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
     }
 
-    private boolean verificarAcesso(Reserva reserva, UsuarioLogadoRequestDTO usuarioLogado) {
-        if(usuarioLogado.admin() && reserva.getCliente().getId() == usuarioLogado.id()) {
-            return true;
-        } else {
-            throw new RecursoNaoEncontradoException("Reserva nao existente");
+    private void verificarAcesso(Reserva reserva, UsuarioLogado usuarioLogado) {
+        boolean dono = reserva.getCliente().getId().equals(usuarioLogado.idCliente());
+
+        if (!usuarioLogado.admin() && !dono) {
+            throw new RecursoNaoEncontradoException(String.format("Reserva não encontrada: %s", reserva.getId()));
         }
     }
 }

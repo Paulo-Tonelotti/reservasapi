@@ -31,6 +31,7 @@ import com.paulotonelotti.reservasapi.entity.enums.StatusReserva;
 import com.paulotonelotti.reservasapi.exceptions.RecursoNaoEncontradoException;
 import com.paulotonelotti.reservasapi.exceptions.RegraNegocioException;
 import com.paulotonelotti.reservasapi.repositories.ReservaRepository;
+import com.paulotonelotti.reservasapi.security.UsuarioLogado;
 import com.paulotonelotti.reservasapi.services.ClienteService;
 import com.paulotonelotti.reservasapi.services.EspacoService;
 import com.paulotonelotti.reservasapi.services.ReservaService;
@@ -58,6 +59,11 @@ class ReservaServiceTest {
     private LocalDateTime fim;
     private ReservaRequestDTO request;
 
+    // Quem está fazendo a requisição (o que o controller monta a partir do token)
+    private UsuarioLogado dono;
+    private UsuarioLogado outroCliente;
+    private UsuarioLogado admin;
+
     @BeforeEach
     void setUp() {
         clienteId = UUID.randomUUID();
@@ -77,6 +83,10 @@ class ReservaServiceTest {
         fim = inicio.plusHours(2);
 
         request = new ReservaRequestDTO(espacoId, inicio, fim);
+
+        dono = new UsuarioLogado(clienteId, false);
+        outroCliente = new UsuarioLogado(UUID.randomUUID(), false);
+        admin = new UsuarioLogado(null, true);
     }
 
     // ---------- criarReserva ----------
@@ -218,7 +228,7 @@ class ReservaServiceTest {
         Reserva reserva = reservaComStatus(StatusReserva.PENDENTE);
         when(reservaRepository.findById(reserva.getId())).thenReturn(Optional.of(reserva));
 
-        ReservaResponseDTO response = reservaService.cancelarReserva(reserva.getId());
+        ReservaResponseDTO response = reservaService.cancelarReserva(reserva.getId(), dono);
 
         assertEquals(StatusReserva.CANCELADA, reserva.getStatus());
         assertEquals(StatusReserva.CANCELADA, response.status());
@@ -229,7 +239,7 @@ class ReservaServiceTest {
         Reserva reserva = reservaComStatus(StatusReserva.CONFIRMADA);
         when(reservaRepository.findById(reserva.getId())).thenReturn(Optional.of(reserva));
 
-        reservaService.cancelarReserva(reserva.getId());
+        reservaService.cancelarReserva(reserva.getId(), dono);
 
         assertEquals(StatusReserva.CANCELADA, reserva.getStatus());
     }
@@ -240,7 +250,7 @@ class ReservaServiceTest {
         when(reservaRepository.findById(reserva.getId())).thenReturn(Optional.of(reserva));
 
         assertThrows(RegraNegocioException.class,
-                () -> reservaService.cancelarReserva(reserva.getId()));
+                () -> reservaService.cancelarReserva(reserva.getId(), dono));
     }
 
     @Test
@@ -249,7 +259,71 @@ class ReservaServiceTest {
         when(reservaRepository.findById(idInexistente)).thenReturn(Optional.empty());
 
         assertThrows(RecursoNaoEncontradoException.class,
-                () -> reservaService.cancelarReserva(idInexistente));
+                () -> reservaService.cancelarReserva(idInexistente, dono));
+    }
+
+    @Test
+    void cancelarReserva_deOutroCliente_lancaRecursoNaoEncontradoEMantemStatus() {
+        Reserva reserva = reservaComStatus(StatusReserva.PENDENTE);
+        when(reservaRepository.findById(reserva.getId())).thenReturn(Optional.of(reserva));
+
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> reservaService.cancelarReserva(reserva.getId(), outroCliente));
+
+        // A mensagem é a mesma de uma reserva inexistente, para não revelar que o id existe
+        assertEquals("Reserva não encontrada: " + reserva.getId(), ex.getMessage());
+        assertEquals(StatusReserva.PENDENTE, reserva.getStatus());
+    }
+
+    @Test
+    void cancelarReserva_deOutroClienteJaCancelada_naoRevelaOStatus() {
+        Reserva reserva = reservaComStatus(StatusReserva.CANCELADA);
+        when(reservaRepository.findById(reserva.getId())).thenReturn(Optional.of(reserva));
+
+        // O acesso é verificado antes da regra de status: o 404 vem antes do 409
+        assertThrows(RecursoNaoEncontradoException.class,
+                () -> reservaService.cancelarReserva(reserva.getId(), outroCliente));
+    }
+
+    @Test
+    void cancelarReserva_adminCancelaReservaDeQualquerCliente() {
+        Reserva reserva = reservaComStatus(StatusReserva.CONFIRMADA);
+        when(reservaRepository.findById(reserva.getId())).thenReturn(Optional.of(reserva));
+
+        reservaService.cancelarReserva(reserva.getId(), admin);
+
+        assertEquals(StatusReserva.CANCELADA, reserva.getStatus());
+    }
+
+    // ---------- buscarPorId ----------
+
+    @Test
+    void buscarPorId_dono_veAReserva() {
+        Reserva reserva = reservaComStatus(StatusReserva.PENDENTE);
+        when(reservaRepository.findComDetalhesById(reserva.getId())).thenReturn(Optional.of(reserva));
+
+        ReservaResponseDTO response = reservaService.buscarPorId(reserva.getId(), dono);
+
+        assertEquals(reserva.getId(), response.id());
+    }
+
+    @Test
+    void buscarPorId_deOutroCliente_lancaRecursoNaoEncontrado() {
+        Reserva reserva = reservaComStatus(StatusReserva.PENDENTE);
+        when(reservaRepository.findComDetalhesById(reserva.getId())).thenReturn(Optional.of(reserva));
+
+        assertThrows(RecursoNaoEncontradoException.class,
+                () -> reservaService.buscarPorId(reserva.getId(), outroCliente));
+    }
+
+    @Test
+    void buscarPorId_admin_veReservaDeQualquerCliente() {
+        Reserva reserva = reservaComStatus(StatusReserva.PENDENTE);
+        when(reservaRepository.findComDetalhesById(reserva.getId())).thenReturn(Optional.of(reserva));
+
+        ReservaResponseDTO response = reservaService.buscarPorId(reserva.getId(), admin);
+
+        assertEquals(reserva.getId(), response.id());
     }
 
     // Monta uma reserva já existente (como se tivesse vindo do banco) no status informado

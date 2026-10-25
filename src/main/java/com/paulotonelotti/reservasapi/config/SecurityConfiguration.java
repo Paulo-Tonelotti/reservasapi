@@ -2,6 +2,7 @@ package com.paulotonelotti.reservasapi.config;
 
 import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.micrometer.observation.autoconfigure.ObservationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -50,6 +51,7 @@ public class SecurityConfiguration {
                         .requestMatchers("/espacos/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/reservas/*/confirmar").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/clientes").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/clientes/*").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(
                         jwt -> jwt.jwtAuthenticationConverter(jwtAuthConverter())) // Usa o converter para pegar as permissoes criadas

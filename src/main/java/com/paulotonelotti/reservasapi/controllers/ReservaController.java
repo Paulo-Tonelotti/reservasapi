@@ -3,7 +3,8 @@ package com.paulotonelotti.reservasapi.controllers;
 import java.net.URI;
 import java.util.UUID;
 
-import com.paulotonelotti.reservasapi.dto.request.UsuarioLogadoRequestDTO;
+import com.paulotonelotti.reservasapi.exceptions.RegraNegocioAutorizacaoException;
+import com.paulotonelotti.reservasapi.security.UsuarioLogado;
 import com.paulotonelotti.reservasapi.exceptions.RegraNegocioException;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -65,7 +66,7 @@ public class ReservaController {
     public ResponseEntity<ReservaResponseDTO> criarReserva(@Valid @RequestBody ReservaRequestDTO reservaReqDto, @AuthenticationPrincipal Jwt jwt) {
         String jwtClienteId = jwt.getClaimAsString("clienteId");
         if(jwtClienteId == null){
-            throw new RegraNegocioException("Apenas clientes podem criar reservas");
+            throw new RegraNegocioAutorizacaoException("Apenas clientes podem criar reservas");
         }
 
         UUID clienteId = UUID.fromString(jwtClienteId);
@@ -95,8 +96,9 @@ public class ReservaController {
             @ParameterObject @PageableDefault(sort = "inicio") Pageable pageable,
             @AuthenticationPrincipal Jwt jwt) {
 
-        boolean ehAdmin = jwt.getClaimAsStringList("roles").contains("ADMIN");
-        UUID clienteIdFiltro = ehAdmin ? clienteId : UUID.fromString(jwt.getClaimAsString("clienteId"));
+        UsuarioLogado usuario = usuarioLogado(jwt);
+        UUID clienteIdFiltro = usuario.admin() ? clienteId : usuario.idCliente();
+
         return ResponseEntity.ok(reservaService.listar(espacoId, clienteIdFiltro, status, pageable));
     }
 
@@ -108,10 +110,8 @@ public class ReservaController {
     @ApiResponse(responseCode = "404", description = "Reserva não encontrada",
             content = @Content(schema = @Schema(implementation = ErroResponse.class)))
     public ResponseEntity<ReservaResponseDTO> buscarReservaPorId(
-            @Parameter(description = "Id da reserva") @PathVariable UUID idReserva, @AuthenticationPrincipal Jwt jwt) {
-        boolean ehAdmin = jwt.getClaimAsStringList("roles").contains("ADMIN");
-        UUID clienteId = UUID.fromString(jwt.getClaimAsString("clienteId"));
-        return ResponseEntity.ok(reservaService.buscarPorId(idReserva, new UsuarioLogadoRequestDTO(clienteId, ehAdmin)));
+            @Parameter(description = "Id da reserva") @PathVariable("id") UUID idReserva, @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(reservaService.buscarPorId(idReserva, usuarioLogado(jwt)));
     }
 
     @PatchMapping("/{id}/confirmar")
@@ -138,9 +138,17 @@ public class ReservaController {
             description = "Reserva já cancelada, ou alterada por outra operação ao mesmo tempo",
             content = @Content(schema = @Schema(implementation = ErroResponse.class)))
     public ResponseEntity<ReservaResponseDTO> cancelarReserva(
-            @Parameter(description = "Id da reserva") @PathVariable UUID idReserva, @AuthenticationPrincipal Jwt jwt) {
+            @Parameter(description = "Id da reserva") @PathVariable("id") UUID idReserva, @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(reservaService.cancelarReserva(idReserva, usuarioLogado(jwt)));
+    }
+
+
+    private UsuarioLogado usuarioLogado(Jwt jwt) {
         boolean ehAdmin = jwt.getClaimAsStringList("roles").contains("ADMIN");
-        UUID clienteId = UUID.fromString(jwt.getClaimAsString("clienteId"));
-        return ResponseEntity.ok(reservaService.cancelarReserva(idReserva, new UsuarioLogadoRequestDTO(clienteId, ehAdmin)));
+
+        String clienteIdToken = jwt.getClaimAsString("clienteId");
+        UUID clienteId = clienteIdToken != null ? UUID.fromString(clienteIdToken) : null;
+
+        return new UsuarioLogado(clienteId, ehAdmin);
     }
 }
