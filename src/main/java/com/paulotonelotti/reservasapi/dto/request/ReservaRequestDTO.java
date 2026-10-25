@@ -11,10 +11,6 @@ import jakarta.validation.constraints.NotNull;
 @Schema(description = "Dados para criar uma reserva")
 public record ReservaRequestDTO(
 
-    @Schema(description = "Id do cliente que está reservando", example = "b0f103f2-1528-4d41-8c0d-189fd5d84982")
-    @NotNull(message = "O id do cliente é obrigatório")
-    UUID clienteId,
-
     @Schema(description = "Id do espaço reservado", example = "210161ef-ace5-44c0-866e-4364831c72be")
     @NotNull(message = "O id do espaço é obrigatório")
     UUID espacoId,

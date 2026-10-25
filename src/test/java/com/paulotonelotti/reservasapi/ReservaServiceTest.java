@@ -76,7 +76,7 @@ class ReservaServiceTest {
         inicio = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0);
         fim = inicio.plusHours(2);
 
-        request = new ReservaRequestDTO(clienteId, espacoId, inicio, fim);
+        request = new ReservaRequestDTO(espacoId, inicio, fim);
     }
 
     // ---------- criarReserva ----------
@@ -87,7 +87,7 @@ class ReservaServiceTest {
         when(espacoService.buscarEntidadePorIdComLock(espacoId)).thenReturn(espaco);
         when(reservaRepository.existeConflito(espacoId, inicio, fim)).thenReturn(false);
 
-        ReservaResponseDTO response = reservaService.criarReserva(request);
+        ReservaResponseDTO response = reservaService.criarReserva(clienteId, request);
 
         // Captura a reserva que o service mandou salvar, para conferir como ela foi montada
         ArgumentCaptor<Reserva> captor = ArgumentCaptor.forClass(Reserva.class);
@@ -111,7 +111,7 @@ class ReservaServiceTest {
         when(espacoService.buscarEntidadePorIdComLock(espacoId)).thenReturn(espaco);
         when(reservaRepository.existeConflito(espacoId, inicio, fim)).thenReturn(false);
 
-        ReservaResponseDTO response = reservaService.criarReserva(request);
+        ReservaResponseDTO response = reservaService.criarReserva(clienteId, request);
 
         // compareTo ignora a escala (1200.0 e 1200.00 são iguais); equals não
         assertEquals(0, new BigDecimal("1200.00").compareTo(response.valorTotal()));
@@ -120,13 +120,13 @@ class ReservaServiceTest {
     @Test
     void criarReserva_umaHoraETrintaMinutos_cobraProporcional() {
         LocalDateTime fimFracionado = inicio.plusMinutes(90);
-        ReservaRequestDTO requestFracionado = new ReservaRequestDTO(clienteId, espacoId, inicio, fimFracionado);
+        ReservaRequestDTO requestFracionado = new ReservaRequestDTO(espacoId, inicio, fimFracionado);
 
         when(clienteService.buscarEntidadePorId(clienteId)).thenReturn(cliente);
         when(espacoService.buscarEntidadePorIdComLock(espacoId)).thenReturn(espaco);
         when(reservaRepository.existeConflito(espacoId, inicio, fimFracionado)).thenReturn(false);
 
-        ReservaResponseDTO response = reservaService.criarReserva(requestFracionado);
+        ReservaResponseDTO response = reservaService.criarReserva(clienteId, requestFracionado);
 
         assertEquals(0, new BigDecimal("900.00").compareTo(response.valorTotal()));
     }
@@ -138,7 +138,7 @@ class ReservaServiceTest {
         when(reservaRepository.existeConflito(espacoId, inicio, fim)).thenReturn(true);
 
         assertThrows(RegraNegocioException.class,
-                () -> reservaService.criarReserva(request));
+                () -> reservaService.criarReserva(clienteId, request));
 
         verify(reservaRepository, never()).save(any());
     }
@@ -149,7 +149,7 @@ class ReservaServiceTest {
                 .thenThrow(new RecursoNaoEncontradoException("Cliente não encontrado: " + clienteId));
 
         assertThrows(RecursoNaoEncontradoException.class,
-                () -> reservaService.criarReserva(request));
+                () -> reservaService.criarReserva(clienteId, request));
 
         verifyNoInteractions(espacoService);
         verifyNoInteractions(reservaRepository);
@@ -162,7 +162,7 @@ class ReservaServiceTest {
                 .thenThrow(new RecursoNaoEncontradoException("Espaço não encontrado: " + espacoId));
 
         assertThrows(RecursoNaoEncontradoException.class,
-                () -> reservaService.criarReserva(request));
+                () -> reservaService.criarReserva(clienteId, request));
 
         verifyNoInteractions(reservaRepository);
     }

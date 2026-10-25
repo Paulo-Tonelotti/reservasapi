@@ -128,7 +128,7 @@ public class GlobalExceptionHandler {
         return montarErroResponse(
                 HttpStatus.UNAUTHORIZED,
                 "Não autorizado",
-                "Email ou senha inválidos",
+                "E-mail ou senha inválidos",
                 request);
     }
 

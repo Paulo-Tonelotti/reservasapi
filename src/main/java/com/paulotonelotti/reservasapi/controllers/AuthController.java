@@ -1,18 +1,6 @@
 package com.paulotonelotti.reservasapi.controllers;
 
-import com.paulotonelotti.reservasapi.dto.request.LoginRequestDTO;
-import com.paulotonelotti.reservasapi.dto.request.RegistroRequestDTO;
-import com.paulotonelotti.reservasapi.dto.response.ClienteResponseDTO;
-import com.paulotonelotti.reservasapi.dto.response.ErroResponse;
-import com.paulotonelotti.reservasapi.dto.response.ErroValidacaoResponse;
-import com.paulotonelotti.reservasapi.dto.response.LoginResponseDTO;
-import com.paulotonelotti.reservasapi.services.AuthService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
+import java.net.URI;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,7 +9,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.net.URI;
+import com.paulotonelotti.reservasapi.dto.request.LoginRequestDTO;
+import com.paulotonelotti.reservasapi.dto.request.RegistroRequestDTO;
+import com.paulotonelotti.reservasapi.dto.response.ClienteResponseDTO;
+import com.paulotonelotti.reservasapi.dto.response.ErroResponse;
+import com.paulotonelotti.reservasapi.dto.response.ErroValidacaoResponse;
+import com.paulotonelotti.reservasapi.dto.response.LoginResponseDTO;
+import com.paulotonelotti.reservasapi.services.AuthService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/auth")
@@ -53,6 +54,14 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    @Operation(summary = "Fazer login",
+            description = "Devolve um JWT para enviar nas próximas requisições no cabeçalho "
+                    + "`Authorization: Bearer <token>`.")
+    @ApiResponse(responseCode = "200", description = "Login realizado")
+    @ApiResponse(responseCode = "400", description = "Dados inválidos",
+            content = @Content(schema = @Schema(implementation = ErroValidacaoResponse.class)))
+    @ApiResponse(responseCode = "401", description = "E-mail ou senha inválidos",
+            content = @Content(schema = @Schema(implementation = ErroResponse.class)))
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO loginRequestDTO) {
         return ResponseEntity.ok(authService.login(loginRequestDTO));
     }

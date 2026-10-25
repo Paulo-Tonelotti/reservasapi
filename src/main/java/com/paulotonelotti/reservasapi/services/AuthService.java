@@ -1,5 +1,12 @@
 package com.paulotonelotti.reservasapi.services;
 
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.paulotonelotti.reservasapi.dto.request.ClienteRequestDTO;
 import com.paulotonelotti.reservasapi.dto.request.LoginRequestDTO;
 import com.paulotonelotti.reservasapi.dto.request.RegistroRequestDTO;
@@ -12,12 +19,6 @@ import com.paulotonelotti.reservasapi.helpers.HelperEmail;
 import com.paulotonelotti.reservasapi.repositories.UsuarioRepository;
 import com.paulotonelotti.reservasapi.security.TokenService;
 import com.paulotonelotti.reservasapi.security.UsuarioAutenticado;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
@@ -28,8 +29,12 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final TokenService tokenService;
 
-    public AuthService(ClienteService clienteService, PasswordEncoder passwordEncoder, UsuarioRepository usuarioRepository,
-                       AuthenticationManager authenticationManager, TokenService tokenService) {
+    public AuthService(
+            ClienteService clienteService,
+            PasswordEncoder passwordEncoder,
+            UsuarioRepository usuarioRepository,
+            AuthenticationManager authenticationManager,
+            TokenService tokenService) {
         this.clienteService = clienteService;
         this.passwordEncoder = passwordEncoder;
         this.usuarioRepository = usuarioRepository;
@@ -40,7 +45,8 @@ public class AuthService {
     @Transactional
     public ClienteResponseDTO registrar(RegistroRequestDTO registroRequestDTO) {
         String email = HelperEmail.normalizarEmail(registroRequestDTO.email());
-        ClienteRequestDTO clienteRequestDTO = new ClienteRequestDTO(registroRequestDTO.nome(), registroRequestDTO.email());
+        ClienteRequestDTO clienteRequestDTO =
+                new ClienteRequestDTO(registroRequestDTO.nome(), registroRequestDTO.email());
 
         if (usuarioRepository.existsByEmail(email)) {
             throw new ConflitoDuplicidadeException("Já existe um cliente cadastrado com esse e-mail");
@@ -60,7 +66,8 @@ public class AuthService {
 
     public LoginResponseDTO login(LoginRequestDTO loginRequestDTO) {
         String email = HelperEmail.normalizarEmail(loginRequestDTO.email());
-        UsernamePasswordAuthenticationToken userAndPass = new UsernamePasswordAuthenticationToken(email, loginRequestDTO.senha());
+        UsernamePasswordAuthenticationToken userAndPass =
+                new UsernamePasswordAuthenticationToken(email, loginRequestDTO.senha());
         Authentication authentication = authenticationManager.authenticate(userAndPass);
 
         UsuarioAutenticado usuarioAutenticado = (UsuarioAutenticado) authentication.getPrincipal();

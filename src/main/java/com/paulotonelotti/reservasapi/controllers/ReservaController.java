@@ -3,11 +3,15 @@ package com.paulotonelotti.reservasapi.controllers;
 import java.net.URI;
 import java.util.UUID;
 
+import com.paulotonelotti.reservasapi.dto.request.UsuarioLogadoRequestDTO;
+import com.paulotonelotti.reservasapi.exceptions.RegraNegocioException;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -58,8 +62,14 @@ public class ReservaController {
             content = @Content(schema = @Schema(implementation = ErroResponse.class)))
     @ApiResponse(responseCode = "409", description = "Horário já ocupado no espaço",
             content = @Content(schema = @Schema(implementation = ErroResponse.class)))
-    public ResponseEntity<ReservaResponseDTO> criarReserva(@Valid @RequestBody ReservaRequestDTO reservaReqDto) {
-        ReservaResponseDTO response = reservaService.criarReserva(reservaReqDto);
+    public ResponseEntity<ReservaResponseDTO> criarReserva(@Valid @RequestBody ReservaRequestDTO reservaReqDto, @AuthenticationPrincipal Jwt jwt) {
+        String jwtClienteId = jwt.getClaimAsString("clienteId");
+        if(jwtClienteId == null){
+            throw new RegraNegocioException("Apenas clientes podem criar reservas");
+        }
+
+        UUID clienteId = UUID.fromString(jwtClienteId);
+        ReservaResponseDTO response = reservaService.criarReserva(clienteId, reservaReqDto);
 
         URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -82,8 +92,12 @@ public class ReservaController {
             @RequestParam(required = false) UUID clienteId,
             @Parameter(description = "Filtra pelo status da reserva")
             @RequestParam(required = false) StatusReserva status,
-            @ParameterObject @PageableDefault(sort = "inicio") Pageable pageable) {
-        return ResponseEntity.ok(reservaService.listar(espacoId, clienteId, status, pageable));
+            @ParameterObject @PageableDefault(sort = "inicio") Pageable pageable,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        boolean ehAdmin = jwt.getClaimAsStringList("roles").contains("ADMIN");
+        UUID clienteIdFiltro = ehAdmin ? clienteId : UUID.fromString(jwt.getClaimAsString("clienteId"));
+        return ResponseEntity.ok(reservaService.listar(espacoId, clienteIdFiltro, status, pageable));
     }
 
     @GetMapping("/{id}")
@@ -94,8 +108,10 @@ public class ReservaController {
     @ApiResponse(responseCode = "404", description = "Reserva não encontrada",
             content = @Content(schema = @Schema(implementation = ErroResponse.class)))
     public ResponseEntity<ReservaResponseDTO> buscarReservaPorId(
-            @Parameter(description = "Id da reserva") @PathVariable UUID id) {
-        return ResponseEntity.ok(reservaService.buscarPorId(id));
+            @Parameter(description = "Id da reserva") @PathVariable UUID idReserva, @AuthenticationPrincipal Jwt jwt) {
+        boolean ehAdmin = jwt.getClaimAsStringList("roles").contains("ADMIN");
+        UUID clienteId = UUID.fromString(jwt.getClaimAsString("clienteId"));
+        return ResponseEntity.ok(reservaService.buscarPorId(idReserva, new UsuarioLogadoRequestDTO(clienteId, ehAdmin)));
     }
 
     @PatchMapping("/{id}/confirmar")
@@ -122,7 +138,9 @@ public class ReservaController {
             description = "Reserva já cancelada, ou alterada por outra operação ao mesmo tempo",
             content = @Content(schema = @Schema(implementation = ErroResponse.class)))
     public ResponseEntity<ReservaResponseDTO> cancelarReserva(
-            @Parameter(description = "Id da reserva") @PathVariable UUID id) {
-        return ResponseEntity.ok(reservaService.cancelarReserva(id));
+            @Parameter(description = "Id da reserva") @PathVariable UUID idReserva, @AuthenticationPrincipal Jwt jwt) {
+        boolean ehAdmin = jwt.getClaimAsStringList("roles").contains("ADMIN");
+        UUID clienteId = UUID.fromString(jwt.getClaimAsString("clienteId"));
+        return ResponseEntity.ok(reservaService.cancelarReserva(idReserva, new UsuarioLogadoRequestDTO(clienteId, ehAdmin)));
     }
 }

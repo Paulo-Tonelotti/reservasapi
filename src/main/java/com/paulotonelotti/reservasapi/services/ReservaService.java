@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.util.UUID;
 
+import com.paulotonelotti.reservasapi.dto.request.UsuarioLogadoRequestDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -36,8 +37,8 @@ public class ReservaService {
     }
 
     @Transactional
-    public ReservaResponseDTO criarReserva(ReservaRequestDTO reservaRequestDTO) {
-        Cliente cliente = clienteService.buscarEntidadePorId(reservaRequestDTO.clienteId());
+    public ReservaResponseDTO criarReserva(UUID clienteId, ReservaRequestDTO reservaRequestDTO) {
+        Cliente cliente = clienteService.buscarEntidadePorId(clienteId);
         Espaco espaco = espacoService.buscarEntidadePorIdComLock(reservaRequestDTO.espacoId());
 
         if (reservaRepository.existeConflito(
@@ -72,10 +73,12 @@ public class ReservaService {
                         String.format("Reserva não encontrada: %s", id)));
     }
 
-    public ReservaResponseDTO buscarPorId(UUID id) {
+    public ReservaResponseDTO buscarPorId(UUID id, UsuarioLogadoRequestDTO usuarioLogado) {
         Reserva reserva = reservaRepository.findComDetalhesById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         String.format("Reserva não encontrada: %s", id)));
+
+        verificarAcesso(reserva, usuarioLogado);
         return new ReservaResponseDTO(reserva);
     }
 
@@ -93,8 +96,10 @@ public class ReservaService {
     }
 
     @Transactional
-    public ReservaResponseDTO cancelarReserva(UUID id) {
+    public ReservaResponseDTO cancelarReserva(UUID id, UsuarioLogadoRequestDTO usuarioLogado) {
         Reserva reserva = buscarEntidadePorId(id);
+
+        verificarAcesso(reserva, usuarioLogado);
 
         if (reserva.getStatus() != StatusReserva.CONFIRMADA
                 && reserva.getStatus() != StatusReserva.PENDENTE) {
@@ -113,5 +118,13 @@ public class ReservaService {
                 .multiply(BigDecimal.valueOf(duracaoReserva.toMinutes()));
 
         return valorTotal.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+    }
+
+    private boolean verificarAcesso(Reserva reserva, UsuarioLogadoRequestDTO usuarioLogado) {
+        if(usuarioLogado.admin() && reserva.getCliente().getId() == usuarioLogado.id()) {
+            return true;
+        } else {
+            throw new RecursoNaoEncontradoException("Reserva nao existente");
+        }
     }
 }
