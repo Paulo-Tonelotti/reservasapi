@@ -17,6 +17,7 @@ import com.paulotonelotti.reservasapi.exceptions.RecursoNaoEncontradoException;
 import com.paulotonelotti.reservasapi.exceptions.RegraNegocioException;
 import com.paulotonelotti.reservasapi.repositories.ClienteRepository;
 import com.paulotonelotti.reservasapi.repositories.ReservaRepository;
+import com.paulotonelotti.reservasapi.repositories.UsuarioRepository;
 
 @Service
 @Transactional(readOnly = true)
@@ -24,10 +25,15 @@ public class ClienteService {
 
     private final ClienteRepository clienteRepository;
     private final ReservaRepository reservaRepository;
+    private final UsuarioRepository usuarioRepository;
 
-    public ClienteService(ClienteRepository clienteRepository, ReservaRepository reservaRepository) {
+    public ClienteService(
+            ClienteRepository clienteRepository,
+            ReservaRepository reservaRepository,
+            UsuarioRepository usuarioRepository) {
         this.clienteRepository = clienteRepository;
         this.reservaRepository = reservaRepository;
+        this.usuarioRepository = usuarioRepository;
     }
 
     @Transactional
@@ -74,7 +80,10 @@ public class ClienteService {
         String nome = normalizarNome(clienteDto.nome());
 
         if (!cliente.getEmail().equals(email)) {
-            boolean emailExistente = clienteRepository.existsByEmail(email);
+            // O e-mail novo não pode estar em uso por outro cliente nem como login de outro usuário
+            // (o login deste cliente ainda está com o e-mail antigo, então não entra nessa checagem)
+            boolean emailExistente = clienteRepository.existsByEmail(email)
+                    || usuarioRepository.existsByEmail(email);
 
             if (emailExistente) {
                 throw new ConflitoDuplicidadeException("Email de atualização já cadastrado");
@@ -83,6 +92,11 @@ public class ClienteService {
 
         cliente.setNome(nome);
         cliente.setEmail(email);
+
+        // Mantém o e-mail de login igual ao do cliente. O usuário vem gerenciado pela transação,
+        // então o dirty checking grava a alteração no commit, sem precisar de save()
+        usuarioRepository.findByClienteId(id)
+                .ifPresent(usuario -> usuario.setEmail(email));
 
         return new ClienteResponseDTO(cliente);
     }
@@ -95,6 +109,11 @@ public class ClienteService {
             throw new RegraNegocioException(
                     "Não é possível excluir o cliente: existem reservas vinculadas a ele");
         }
+
+        // O usuário (login) aponta para o cliente pela chave estrangeira, então sai primeiro.
+        // Os dois deletes estão na mesma transação: se um falhar, nenhum é aplicado
+        usuarioRepository.findByClienteId(id)
+                .ifPresent(usuarioRepository::delete);
 
         clienteRepository.delete(cliente);
     }

@@ -1,5 +1,9 @@
 package com.paulotonelotti.reservasapi.services;
 
+import com.paulotonelotti.reservasapi.dto.request.AlterarSenhaRequestDTO;
+import com.paulotonelotti.reservasapi.exceptions.DadosInvalidosException;
+import com.paulotonelotti.reservasapi.exceptions.RecursoNaoEncontradoException;
+import com.paulotonelotti.reservasapi.exceptions.RegraNegocioException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -19,6 +23,8 @@ import com.paulotonelotti.reservasapi.helpers.HelperEmail;
 import com.paulotonelotti.reservasapi.repositories.UsuarioRepository;
 import com.paulotonelotti.reservasapi.security.TokenService;
 import com.paulotonelotti.reservasapi.security.UsuarioAutenticado;
+
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -72,5 +78,21 @@ public class AuthService {
 
         UsuarioAutenticado usuarioAutenticado = (UsuarioAutenticado) authentication.getPrincipal();
         return tokenService.gerarToken(usuarioAutenticado);
+    }
+
+    @Transactional
+    public void alterarSenha(UUID usuarioId, AlterarSenhaRequestDTO alterarSenhaRequestDTO) {
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado"));
+
+        if (!passwordEncoder.matches(alterarSenhaRequestDTO.senhaAtual(), usuario.getSenha())) {
+            throw new DadosInvalidosException("A senha atual está incorreta");
+        }
+
+        if (passwordEncoder.matches(alterarSenhaRequestDTO.senhaNova(), usuario.getSenha())) {
+            throw new DadosInvalidosException("A nova senha deve ser diferente da atual");
+        }
+
+        usuario.setSenha(passwordEncoder.encode(alterarSenhaRequestDTO.senhaNova()));
     }
 }

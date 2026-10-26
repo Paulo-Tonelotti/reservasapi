@@ -107,13 +107,24 @@ public class GlobalExceptionHandler {
                 request);
     }
 
-    @ExceptionHandler(RegraNegocioAutorizacaoException.class)
-    public ResponseEntity<ErroResponse> handleRegraNegocio(
-            RegraNegocioAutorizacaoException ex, HttpServletRequest request) {
+    @ExceptionHandler(AcessoNegadoException.class)
+    public ResponseEntity<ErroResponse> handleAcessoNegado(
+            AcessoNegadoException ex, HttpServletRequest request) {
 
         return montarErroResponse(
                 HttpStatus.FORBIDDEN,
-                "Você não tem permissão para acessar esse recurso",
+                "Acesso negado",
+                ex.getMessage(),
+                request);
+    }
+
+    @ExceptionHandler(DadosInvalidosException.class)
+    public ResponseEntity<ErroResponse> handleDadosInvalidos(
+            DadosInvalidosException ex, HttpServletRequest request) {
+
+        return montarErroResponse(
+                HttpStatus.BAD_REQUEST,
+                "Dados inválidos",
                 ex.getMessage(),
                 request);
     }

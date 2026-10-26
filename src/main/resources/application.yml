@@ -4,6 +4,10 @@ app:
     jwt:
         secret: ${JWT_SECRET}
         expiracao-minutos: 60
+    cors:
+        # Origens (endereços do frontend) que podem chamar a API pelo navegador, separadas por vírgula.
+        # 5173 é a porta padrão do Vite; remova a que não for a do seu frontend
+        origens: http://localhost:5173,http://localhost:517
 spring:
     config:
         import: optional:file:.env[.properties]

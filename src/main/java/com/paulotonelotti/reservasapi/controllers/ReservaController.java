@@ -3,9 +3,8 @@ package com.paulotonelotti.reservasapi.controllers;
 import java.net.URI;
 import java.util.UUID;
 
-import com.paulotonelotti.reservasapi.exceptions.RegraNegocioAutorizacaoException;
+import com.paulotonelotti.reservasapi.exceptions.AcessoNegadoException;
 import com.paulotonelotti.reservasapi.security.UsuarioLogado;
-import com.paulotonelotti.reservasapi.exceptions.RegraNegocioException;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -59,18 +58,21 @@ public class ReservaController {
     @ApiResponse(responseCode = "201", description = "Reserva criada")
     @ApiResponse(responseCode = "400", description = "Dados inválidos (datas no passado, fim antes do início etc.)",
             content = @Content(schema = @Schema(implementation = ErroValidacaoResponse.class)))
-    @ApiResponse(responseCode = "404", description = "Cliente ou espaço não encontrado",
+    @ApiResponse(responseCode = "403", description = "Apenas clientes podem criar reservas",
+            content = @Content(schema = @Schema(implementation = ErroResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Espaço não encontrado",
             content = @Content(schema = @Schema(implementation = ErroResponse.class)))
     @ApiResponse(responseCode = "409", description = "Horário já ocupado no espaço",
             content = @Content(schema = @Schema(implementation = ErroResponse.class)))
-    public ResponseEntity<ReservaResponseDTO> criarReserva(@Valid @RequestBody ReservaRequestDTO reservaReqDto, @AuthenticationPrincipal Jwt jwt) {
-        String jwtClienteId = jwt.getClaimAsString("clienteId");
-        if(jwtClienteId == null){
-            throw new RegraNegocioAutorizacaoException("Apenas clientes podem criar reservas");
+    public ResponseEntity<ReservaResponseDTO> criarReserva(
+            @Valid @RequestBody ReservaRequestDTO reservaReqDto, @AuthenticationPrincipal Jwt jwt) {
+        // A regra de URL já barra quem não é CLIENTE; esta checagem é uma segunda proteção
+        UsuarioLogado usuario = usuarioLogado(jwt);
+        if (usuario.idCliente() == null) {
+            throw new AcessoNegadoException("Apenas clientes podem criar reservas");
         }
 
-        UUID clienteId = UUID.fromString(jwtClienteId);
-        ReservaResponseDTO response = reservaService.criarReserva(clienteId, reservaReqDto);
+        ReservaResponseDTO response = reservaService.criarReserva(usuario.idCliente(), reservaReqDto);
 
         URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -144,11 +146,6 @@ public class ReservaController {
 
 
     private UsuarioLogado usuarioLogado(Jwt jwt) {
-        boolean ehAdmin = jwt.getClaimAsStringList("roles").contains("ADMIN");
-
-        String clienteIdToken = jwt.getClaimAsString("clienteId");
-        UUID clienteId = clienteIdToken != null ? UUID.fromString(clienteIdToken) : null;
-
-        return new UsuarioLogado(clienteId, ehAdmin);
+        return UsuarioLogado.doToken(jwt);
     }
 }

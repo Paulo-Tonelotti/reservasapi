@@ -1,14 +1,19 @@
 package com.paulotonelotti.reservasapi.controllers;
 
 import java.net.URI;
+import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import com.paulotonelotti.reservasapi.dto.request.AlterarSenhaRequestDTO;
 import com.paulotonelotti.reservasapi.dto.request.LoginRequestDTO;
 import com.paulotonelotti.reservasapi.dto.request.RegistroRequestDTO;
 import com.paulotonelotti.reservasapi.dto.response.ClienteResponseDTO;
@@ -21,12 +26,15 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/auth")
 @Tag(name = "Autenticação")
+@SecurityRequirements // vazio: o cadastro e o login são públicos, sem o cadeado do Swagger
 public class AuthController {
 
     private final AuthService authService;
@@ -42,7 +50,8 @@ public class AuthController {
             content = @Content(schema = @Schema(implementation = ErroValidacaoResponse.class)))
     @ApiResponse(responseCode = "409", description = "Email já cadastrado",
             content = @Content(schema = @Schema(implementation = ErroResponse.class)))
-    public ResponseEntity<ClienteResponseDTO> registrarCliente(@Valid @RequestBody RegistroRequestDTO registroRequestDTO) {
+    public ResponseEntity<ClienteResponseDTO> registrarCliente(
+            @Valid @RequestBody RegistroRequestDTO registroRequestDTO) {
         ClienteResponseDTO response = authService.registrar(registroRequestDTO);
 
         URI uri = ServletUriComponentsBuilder.fromCurrentContextPath()
@@ -64,5 +73,24 @@ public class AuthController {
             content = @Content(schema = @Schema(implementation = ErroResponse.class)))
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO loginRequestDTO) {
         return ResponseEntity.ok(authService.login(loginRequestDTO));
+    }
+
+    @PutMapping("/alterar-senha")
+    // Sobrescreve o @SecurityRequirements vazio da classe: este endpoint exige o token
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Alterar a própria senha",
+            description = "Troca a senha do usuário logado. É preciso informar a senha atual.")
+    @ApiResponse(responseCode = "204", description = "Senha alterada")
+    @ApiResponse(responseCode = "400",
+            description = "Dados inválidos, senha atual incorreta ou nova senha igual à atual",
+            content = @Content(schema = @Schema(implementation = ErroResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado",
+            content = @Content(schema = @Schema(implementation = ErroResponse.class)))
+    public ResponseEntity<Void> alterarSenha(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody AlterarSenhaRequestDTO alterarSenhaRequestDTO) {
+        UUID usuarioId = UUID.fromString(jwt.getSubject());
+        authService.alterarSenha(usuarioId, alterarSenhaRequestDTO);
+        return ResponseEntity.noContent().build();
     }
 }

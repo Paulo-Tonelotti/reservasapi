@@ -2,7 +2,6 @@ package com.paulotonelotti.reservasapi.config;
 
 import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.micrometer.observation.autoconfigure.ObservationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -23,10 +22,16 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import com.paulotonelotti.reservasapi.security.TratadorErrosSeguranca;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -36,9 +41,12 @@ public class SecurityConfiguration {
     private String jwtSecret;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http, TratadorErrosSeguranca tratadorErros) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
+                // Usa o bean corsConfigurationSource abaixo (libera o frontend a chamar a API pelo navegador)
+                .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
@@ -49,14 +57,42 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/espacos/**").authenticated()
                         .requestMatchers("/espacos/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/reservas").hasRole("CLIENTE")
                         .requestMatchers(HttpMethod.PATCH, "/reservas/*/confirmar").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/clientes").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/clientes").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/clientes/*").hasRole("ADMIN")
+                        // GET e PUT de /clientes/{id}: qualquer usuário logado passa daqui,
+                        // e o ClienteController só deixa o ADMIN ou o próprio cliente seguir
                         .anyRequest().authenticated())
-                .oauth2ResourceServer(oauth -> oauth.jwt(
-                        jwt -> jwt.jwtAuthenticationConverter(jwtAuthConverter())) // Usa o converter para pegar as permissoes criadas
-                        ) // customiza com os argumentos padrao de codificacao jwt
+                .oauth2ResourceServer(oauth -> oauth
+                        // Usa o converter para transformar o claim "roles" em permissões ROLE_*
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthConverter()))
+                        // Token ausente, inválido ou expirado → 401 no formato do ErroResponse
+                        .authenticationEntryPoint(tratadorErros)
+                        .accessDeniedHandler(tratadorErros))
+                // Mesmos tratadores para os erros que acontecem fora da validação do token
+                .exceptionHandling(excecoes -> excecoes
+                        .authenticationEntryPoint(tratadorErros)
+                        .accessDeniedHandler(tratadorErros))
                 .build(); // faz a ‘build’ do objeto http security
+    }
+
+    // Diz ao navegador quais origens (o frontend) podem chamar a API, com quais métodos e cabeçalhos
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource(@Value("${app.cors.origens}") List<String> origens) {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(origens);
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        // Sem isso, o JavaScript do frontend não consegue ler o cabeçalho Location das respostas 201
+        config.setExposedHeaders(List.of("Location"));
+        // O navegador guarda a resposta da verificação (preflight) por 1 hora
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 
     // Cria o encoder, o carimbo que assina os 'tokens' que são gerados

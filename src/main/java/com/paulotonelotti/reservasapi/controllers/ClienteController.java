@@ -8,6 +8,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,6 +24,8 @@ import com.paulotonelotti.reservasapi.dto.request.ClienteRequestDTO;
 import com.paulotonelotti.reservasapi.dto.response.ClienteResponseDTO;
 import com.paulotonelotti.reservasapi.dto.response.ErroResponse;
 import com.paulotonelotti.reservasapi.dto.response.ErroValidacaoResponse;
+import com.paulotonelotti.reservasapi.exceptions.RecursoNaoEncontradoException;
+import com.paulotonelotti.reservasapi.security.UsuarioLogado;
 import com.paulotonelotti.reservasapi.services.ClienteService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -80,7 +84,9 @@ public class ClienteController {
     @ApiResponse(responseCode = "404", description = "Cliente não encontrado",
             content = @Content(schema = @Schema(implementation = ErroResponse.class)))
     public ResponseEntity<ClienteResponseDTO> buscarClientePorId(
-            @Parameter(description = "Id do cliente") @PathVariable UUID id) {
+            @Parameter(description = "Id do cliente") @PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+        verificarAcesso(id, jwt);
+
         ClienteResponseDTO response = clienteService.buscarPorId(id);
         return ResponseEntity.ok(response);
     }
@@ -96,7 +102,10 @@ public class ClienteController {
             content = @Content(schema = @Schema(implementation = ErroResponse.class)))
     public ResponseEntity<ClienteResponseDTO> atualizarCliente(
             @Parameter(description = "Id do cliente") @PathVariable UUID id,
-            @Valid @RequestBody ClienteRequestDTO clienteReqDto) {
+            @Valid @RequestBody ClienteRequestDTO clienteReqDto,
+            @AuthenticationPrincipal Jwt jwt) {
+        verificarAcesso(id, jwt);
+
         ClienteResponseDTO response = clienteService.atualizar(id, clienteReqDto);
         return ResponseEntity.ok(response);
     }
@@ -111,5 +120,12 @@ public class ClienteController {
     public ResponseEntity<Void> excluirCliente(@Parameter(description = "Id do cliente") @PathVariable UUID id) {
         clienteService.excluir(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // Outro cliente recebe o mesmo 404 de um id inexistente, para não revelar que o cliente existe
+    private void verificarAcesso(UUID clienteId, Jwt jwt) {
+        if (!UsuarioLogado.doToken(jwt).podeAcessarCliente(clienteId)) {
+            throw new RecursoNaoEncontradoException(String.format("Cliente não encontrado: %s", clienteId));
+        }
     }
 }
