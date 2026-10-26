@@ -55,6 +55,8 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.GET, "/swagger-ui/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v3/api-docs/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/esqueci-senha").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/redefinir-senha").permitAll()
                         .requestMatchers(HttpMethod.GET, "/espacos/**").authenticated()
                         .requestMatchers("/espacos/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/reservas").hasRole("CLIENTE")

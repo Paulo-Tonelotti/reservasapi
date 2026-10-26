@@ -8,6 +8,14 @@ app:
         # Origens (endereços do frontend) que podem chamar a API pelo navegador, separadas por vírgula.
         # 5173 é a porta padrão do Vite; remova a que não for a do seu frontend
         origens: http://localhost:5173,http://localhost:517
+    frontend:
+        url: http://localhost:5173
+    mail:
+        host: ${MAIL_HOST:localhost}
+        port: ${MAIL_PORT:1025}
+        username: ${MAIL_USER:}
+        password: ${MAIL_PASSWORD:}
+        remetente: teste@testeapi.com.br
 spring:
     config:
         import: optional:file:.env[.properties]

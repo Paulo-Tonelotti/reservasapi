@@ -14,7 +14,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.paulotonelotti.reservasapi.dto.request.AlterarSenhaRequestDTO;
+import com.paulotonelotti.reservasapi.dto.request.EsqueciSenhaRequestDTO;
 import com.paulotonelotti.reservasapi.dto.request.LoginRequestDTO;
+import com.paulotonelotti.reservasapi.dto.request.RedefinirSenhaRequestDTO;
 import com.paulotonelotti.reservasapi.dto.request.RegistroRequestDTO;
 import com.paulotonelotti.reservasapi.dto.response.ClienteResponseDTO;
 import com.paulotonelotti.reservasapi.dto.response.ErroResponse;
@@ -91,6 +93,35 @@ public class AuthController {
             @Valid @RequestBody AlterarSenhaRequestDTO alterarSenhaRequestDTO) {
         UUID usuarioId = UUID.fromString(jwt.getSubject());
         authService.alterarSenha(usuarioId, alterarSenhaRequestDTO);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/esqueci-senha")
+    @Operation(summary = "Solicitar redefinição de senha",
+            description = """
+                    Se o e-mail estiver cadastrado, envia um link de redefinição válido por 30 minutos. \
+                    A resposta é sempre a mesma, exista o e-mail ou não, para não revelar quais e-mails \
+                    estão cadastrados. Um novo pedido invalida os links anteriores.""")
+    @ApiResponse(responseCode = "204",
+            description = "Pedido recebido (se o e-mail estiver cadastrado, as instruções foram enviadas)")
+    @ApiResponse(responseCode = "400", description = "E-mail inválido",
+            content = @Content(schema = @Schema(implementation = ErroValidacaoResponse.class)))
+    public ResponseEntity<Void> esqueciSenha(
+            @Valid @RequestBody EsqueciSenhaRequestDTO esqueciSenhaRequestDTO) {
+        authService.solicitarRedefinicao(esqueciSenhaRequestDTO);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/redefinir-senha")
+    @Operation(summary = "Redefinir a senha com o link recebido por e-mail",
+            description = "Usa o token do link enviado pelo `esqueci-senha`. Cada link só pode ser usado uma vez.")
+    @ApiResponse(responseCode = "204", description = "Senha redefinida")
+    @ApiResponse(responseCode = "400",
+            description = "Link inválido, expirado ou já usado, ou nova senha fora das regras",
+            content = @Content(schema = @Schema(implementation = ErroResponse.class)))
+    public ResponseEntity<Void> redefinirSenha(
+            @Valid @RequestBody RedefinirSenhaRequestDTO redefinirSenhaRequestDTO) {
+        authService.redefinirSenha(redefinirSenhaRequestDTO);
         return ResponseEntity.noContent().build();
     }
 }

@@ -1,9 +1,11 @@
 package com.paulotonelotti.reservasapi.services;
 
-import com.paulotonelotti.reservasapi.dto.request.AlterarSenhaRequestDTO;
-import com.paulotonelotti.reservasapi.exceptions.DadosInvalidosException;
-import com.paulotonelotti.reservasapi.exceptions.RecursoNaoEncontradoException;
-import com.paulotonelotti.reservasapi.exceptions.RegraNegocioException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Optional;
+import java.util.UUID;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -11,41 +13,55 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.paulotonelotti.reservasapi.dto.request.AlterarSenhaRequestDTO;
 import com.paulotonelotti.reservasapi.dto.request.ClienteRequestDTO;
+import com.paulotonelotti.reservasapi.dto.request.EsqueciSenhaRequestDTO;
 import com.paulotonelotti.reservasapi.dto.request.LoginRequestDTO;
+import com.paulotonelotti.reservasapi.dto.request.RedefinirSenhaRequestDTO;
 import com.paulotonelotti.reservasapi.dto.request.RegistroRequestDTO;
 import com.paulotonelotti.reservasapi.dto.response.ClienteResponseDTO;
 import com.paulotonelotti.reservasapi.dto.response.LoginResponseDTO;
+import com.paulotonelotti.reservasapi.entity.RedefinicaoSenha;
 import com.paulotonelotti.reservasapi.entity.Usuario;
 import com.paulotonelotti.reservasapi.entity.enums.Papel;
 import com.paulotonelotti.reservasapi.exceptions.ConflitoDuplicidadeException;
+import com.paulotonelotti.reservasapi.exceptions.DadosInvalidosException;
+import com.paulotonelotti.reservasapi.exceptions.RecursoNaoEncontradoException;
 import com.paulotonelotti.reservasapi.helpers.HelperEmail;
+import com.paulotonelotti.reservasapi.repositories.RedefinicaoSenhaRepository;
 import com.paulotonelotti.reservasapi.repositories.UsuarioRepository;
+import com.paulotonelotti.reservasapi.security.GeradorTokenRecuperacao;
 import com.paulotonelotti.reservasapi.security.TokenService;
 import com.paulotonelotti.reservasapi.security.UsuarioAutenticado;
-
-import java.util.UUID;
 
 @Service
 public class AuthService {
 
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
     private final ClienteService clienteService;
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final TokenService tokenService;
+    private final RedefinicaoSenhaRepository redefinicaoSenhaRepository;
+    private final EmailService emailService;
 
     public AuthService(
             ClienteService clienteService,
             PasswordEncoder passwordEncoder,
             UsuarioRepository usuarioRepository,
             AuthenticationManager authenticationManager,
-            TokenService tokenService) {
+            TokenService tokenService,
+            RedefinicaoSenhaRepository redefinicaoSenhaRepository,
+            EmailService emailService) {
         this.clienteService = clienteService;
         this.passwordEncoder = passwordEncoder;
         this.usuarioRepository = usuarioRepository;
         this.authenticationManager = authenticationManager;
         this.tokenService = tokenService;
+        this.redefinicaoSenhaRepository = redefinicaoSenhaRepository;
+        this.emailService = emailService;
     }
 
     @Transactional
@@ -94,5 +110,43 @@ public class AuthService {
         }
 
         usuario.setSenha(passwordEncoder.encode(alterarSenhaRequestDTO.senhaNova()));
+    }
+
+    @Transactional
+    public void solicitarRedefinicao(EsqueciSenhaRequestDTO esqueciSenhaRequestDTO) {
+        String email = HelperEmail.normalizarEmail(esqueciSenhaRequestDTO.email());
+        Optional<Usuario> usuario = usuarioRepository.findByEmail(email);
+        if (usuario.isPresent()) {
+            redefinicaoSenhaRepository.invalidarPendentes(usuario.get().getId(), Instant.now());
+            String codigo = GeradorTokenRecuperacao.gerarCodigo();
+            String tokenHash = GeradorTokenRecuperacao.gerarTokenHashCodigo(codigo);
+
+            RedefinicaoSenha redefinicaoSenha = new RedefinicaoSenha();
+            redefinicaoSenha.setUsuario(usuario.get());
+            redefinicaoSenha.setTokenHash(tokenHash);
+            redefinicaoSenha.setExpiraEm(Instant.now().plus(30, ChronoUnit.MINUTES));
+
+            redefinicaoSenhaRepository.save(redefinicaoSenha);
+
+            String link = frontendUrl + "/redefinir-senha?token=" + codigo;
+            emailService.enviarRedefinicaoSenha(usuario.get().getEmail(), link);
+        }
+    }
+
+    @Transactional
+    public void redefinirSenha(RedefinirSenhaRequestDTO redefinirSenhaRequestDTO) {
+        String codigoToken = redefinirSenhaRequestDTO.token();
+        String tokenHash = GeradorTokenRecuperacao.gerarTokenHashCodigo(codigoToken);
+
+        RedefinicaoSenha pedido = redefinicaoSenhaRepository
+                .findByTokenHash(tokenHash).orElseThrow(() -> new DadosInvalidosException("Link inválido ou expirado"));
+
+        if (pedido.getExpiraEm().isAfter(Instant.now()) && pedido.getUsadoEm() == null) {
+            Usuario usuario = pedido.getUsuario();
+            usuario.setSenha(passwordEncoder.encode(redefinirSenhaRequestDTO.novaSenha()));
+            pedido.setUsadoEm(Instant.now());
+        } else {
+            throw new DadosInvalidosException("Link inválido ou expirado");
+        }
     }
 }

@@ -4,6 +4,7 @@ import java.util.Locale;
 import java.util.UUID;
 
 import com.paulotonelotti.reservasapi.helpers.HelperEmail;
+import com.paulotonelotti.reservasapi.repositories.RedefinicaoSenhaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -26,14 +27,17 @@ public class ClienteService {
     private final ClienteRepository clienteRepository;
     private final ReservaRepository reservaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final RedefinicaoSenhaRepository redefinicaoSenhaRepository;
 
     public ClienteService(
             ClienteRepository clienteRepository,
             ReservaRepository reservaRepository,
-            UsuarioRepository usuarioRepository) {
+            UsuarioRepository usuarioRepository,
+            RedefinicaoSenhaRepository redefinicaoSenhaRepository) {
         this.clienteRepository = clienteRepository;
         this.reservaRepository = reservaRepository;
         this.usuarioRepository = usuarioRepository;
+        this.redefinicaoSenhaRepository = redefinicaoSenhaRepository;
     }
 
     @Transactional
@@ -112,10 +116,12 @@ public class ClienteService {
 
         // O usuário (login) aponta para o cliente pela chave estrangeira, então sai primeiro.
         // Os dois deletes estão na mesma transação: se um falhar, nenhum é aplicado
-        usuarioRepository.findByClienteId(id)
-                .ifPresent(usuarioRepository::delete);
+        usuarioRepository.findByClienteId(id).ifPresent(usuario -> {
+            redefinicaoSenhaRepository.apagarPorUsuario(usuario.getId());  // 1. os pedidos (apontam para o usuário)
+            usuarioRepository.delete(usuario);                              // 2. o usuário (aponta para o cliente)
+        });
 
-        clienteRepository.delete(cliente);
+        clienteRepository.delete(cliente);                                  // 3. o cliente
     }
 
     private String normalizarNome(String nome) {
